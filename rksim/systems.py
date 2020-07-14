@@ -1,9 +1,13 @@
 import numpy as np
 from rksim.data import TimeSeries
+from rksim.graphs import make_network
 from rksim.plotting import plot
 
 
 class Species:
+
+    def __eq__(self, other):
+        return self.name == other.name
 
     def __init__(self, name=None):
         """
@@ -12,6 +16,10 @@ class Species:
         :param name: (str) Name of this species
         """
         self.name = name
+
+        # Order of species in a reaction e.g. R + R -> P, R.order = 2
+        # and P.order = 1
+        self.order = 1
 
         self.time_series = None                 # rksim.data.TimeSeries
         self.simulated_time_series = None       # rksim.data.TimeSeries
@@ -27,11 +35,29 @@ class Product(Species):
 
 class Reaction:
 
+    def set_components(self, components):
+        """Remove any duplicates and set orders"""
+        unique_names = set(species.name for species in components)
+
+        for name in unique_names:
+            identical_species = [s for s in components if s.name == name]
+
+            # Add this species only once
+            species = identical_species[0]
+
+            # The order in this species is the number of times it appears
+            # as either a reactant or product
+            species.order = len(identical_species)
+
+            self.components.append(species)
+
+        return None
+
     def __init__(self, *args):
         """Reaction e.g. R -> P"""
 
-        self.reactants = [mol for mol in args if isinstance(mol, Reactant)]
-        self.products = [mol for mol in args if isinstance(mol, Product)]
+        self.components = []
+        self.set_components(args)
 
 
 class Irreversible(Reaction):
@@ -87,7 +113,7 @@ class System:
         """Get the next species in this system"""
 
         for reaction in self.reactions:
-            for species in reaction.reactants + reaction.products:
+            for species in reaction.components:
                 yield species
 
         return None
@@ -108,3 +134,5 @@ class System:
         :param args: (rksim.system.Reaction)
         """
         self.reactions = args
+
+        self.network = make_network(self)
