@@ -1,0 +1,6 @@
+.idea/
+build/
+dist/
+rksim.egg-info/
+rksim/__pycache__
+tests/__pycache__/
