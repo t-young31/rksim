@@ -86,14 +86,18 @@ class Data:
         """Assign time series to components in a system of reactions"""
 
         for time_series in self._list:
-            for species in system.species():
+            for i in system.network.nodes:
+                node = system.network.nodes[i]
+                species = node['species']
 
                 # If the name of the series is the same as the species
                 # then assign it a time series
                 if time_series.name == species.name:
                     species.time_series = time_series
 
-        # TODO unassigned time series or species
+                    # Initial concentration for this component
+                    node['c0'] = time_series.concentrations[0]
+
         return None
 
     def fit(self, system):

@@ -1,8 +1,10 @@
 from rksim.data import Data, TimeSeries
 from rksim.systems import *
 from rksim.data import extract_data
+from rksim.reactions import Irreversible
+from rksim.species import Reactant, Product
+from rksim.systems import System
 from rksim.exceptions import RKSimCritical, DataMalformatted
-from rksim.fit import get_initial_concentrations
 import pytest
 import numpy as np
 import os
@@ -91,10 +93,28 @@ def test_simple_fit():
                                  Product(name='P')))
     data.assign_series(system)
 
-    r0, p0 = get_initial_concentrations(system)
-    assert 0.999 < r0 < 1.001
-    assert -0.001 < p0 < 0.001
+    # Ensure the initial and final concentrations are as expected
+    for species in system.species():
+        if species.name == 'R':
+            assert species.time_series is not None
+            assert 0.999 < species.time_series.concentrations[0] < 1.001
+            assert -0.001 < species.time_series.concentrations[-1] < 0.001
 
+        if species.name == 'P':
+            assert species.time_series is not None
+            assert -0.001 < species.time_series.concentrations[0] < 0.001
+            assert 0.999 < species.time_series.concentrations[-1] < 1.001
+
+    for i in system.network.nodes:
+        node = system.network.nodes[i]
+
+        if node['name'] == 'R':
+            assert 0.999 < node['c0'] < 1.001
+
+        if node['name'] == 'P':
+            assert -0.001 < node['c0'] < 0.001
+
+    return
     data.fit(system)
     system.plot()
     assert os.path.exists('system.png')

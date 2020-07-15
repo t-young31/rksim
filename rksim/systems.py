@@ -1,84 +1,25 @@
 import numpy as np
 from rksim.data import TimeSeries
-from rksim.graphs import make_network
+import rksim.networks as nws
 from rksim.plotting import plot
-
-
-class Species:
-
-    def __eq__(self, other):
-        return self.name == other.name
-
-    def __init__(self, name=None):
-        """
-        Generic molecular species e.g. both R and P in R -> P
-
-        :param name: (str) Name of this species
-        """
-        self.name = name
-
-        # Order of species in a reaction e.g. R + R -> P, R.order = 2
-        # and P.order = 1
-        self.order = 1
-
-        self.time_series = None                 # rksim.data.TimeSeries
-        self.simulated_time_series = None       # rksim.data.TimeSeries
-
-
-class Reactant(Species):
-    """Reactant species e.g. R in R -> P"""
-
-
-class Product(Species):
-    """Product species e.g. P in R -> P"""
-
-
-class Reaction:
-
-    def set_components(self, components):
-        """Remove any duplicates and set orders"""
-        unique_names = set(species.name for species in components)
-
-        for name in unique_names:
-            identical_species = [s for s in components if s.name == name]
-
-            # Add this species only once
-            species = identical_species[0]
-
-            # The order in this species is the number of times it appears
-            # as either a reactant or product
-            species.order = len(identical_species)
-
-            self.components.append(species)
-
-        return None
-
-    def __init__(self, *args):
-        """Reaction e.g. R -> P"""
-
-        self.components = []
-        self.set_components(args)
-
-
-class Irreversible(Reaction):
-    kf = 1.0
-
-
-class Reversible(Reaction):
-    kf = 1.0
-    kb = 1.0
 
 
 class System:
 
-    def set_init_ks(self):
+    def __str__(self):
+        return f'{[species.name for species in self.species()]}'
+
+    def set_rate_constants(self, k=1.0):
         """Set initial rate constants"""
-        # TODO something sensible here
+        for edge in self.network.edges:
+            self.network.edges[edge]['k'] = k
+
         return None
 
     def set_simulated(self, concentrations, times):
         """
-        Set concentrations as a function of time for
+        Set concentrations as a function of time for all species in this
+        system of reactions
 
         :param concentrations: (np.ndarray) Array of concentrations (mol dm^-3)
                                for all components in this system. shape (n, m)
@@ -94,27 +35,72 @@ class System:
                                                        concentrations=concs)
         return None
 
-    def derivative(self, concentrations, t):
-        """Calculate the derivative of all the concentrations wrt time"""
-        if len(self.reactions) > 1:
-            raise NotImplementedError
+    def derivative(self, concentrations, time=0.0):
+        """
+        Calculate the derivative of all the concentrations with respect to time
 
-        rconc, p_conc = concentrations
-        reaction = self.reactions[0]
+        :param time: (float) Time in s at which the derivative is calculated
 
-        # TODO work out the general formulation of this
-        assert isinstance(reaction, Irreversible)
+        :param concentrations: (np.ndarray) array of concentrations in mol
+                               dm^-3 shape = (n,) where n is the number of
+                               components (species in this system). Must be >0
+        """
+        n = len(concentrations)
+        dcdt = np.zeros(n)
 
-        deriv = [-reaction.kf * rconc, reaction.kf * rconc]
+        for i in range(n):
+            inflows = 0
+            outflows = 0
 
-        return np.array(deriv)
+            # Concentration on this node
+            conc = concentrations[i]
+
+            # Product of concentrations on this node e.g. [A][B]
+            # if i == A and the reaction is A + B -> P
+            for neighbour in nws.neighbours(self.network, i):
+                conc *= concentrations[neighbour]
+
+            # Add the rate constant for all outflowing reactions
+            #          P1
+            #          ^
+            #          |
+            # i.e. A + B -> P2    then outflows for B is (k1 + k2)
+            # and j in [P1, P2]
+            for j in nws.outflow_node(self.network, i):
+                # Add the rate constant for this outflow reaction
+                # will be multiplied by [A][B] and divided by the number
+                # of neighbours + 1 i.e. the above n_neighbours = 0
+                n_neighbours = self.network.nodes[j]['n_neighbours']
+
+                outflows += self.network[i][j]['k'] / (n_neighbours + 1)
+
+            outflows *= conc
+
+            # Add the rate constant for all inflowing reactions to this
+            # node for example:  A + B -> P then inflow is
+            for j in nws.inflow_node(self.network, i):
+
+                n_j = self.network.nodes[j]['n_neighbours']
+                rate_constant = self.network[j][i]['k']
+
+                inflow = concentrations[j] * rate_constant / (n_j + 1)
+
+                for k in nws.neighbours(self.network, j):
+                    inflow *= concentrations[k]
+
+                inflows += inflow
+
+            # Derivative is the inflow minus the outflow e.g.
+            # R -> P  d[R]/dt = -k[R], d[P]/dt = k[R]
+            dcdt[i] = inflows - outflows
+
+        return dcdt
 
     def species(self):
-        """Get the next species in this system"""
+        """Get the next species in this system from the reaction network"""
 
-        for reaction in self.reactions:
-            for species in reaction.components:
-                yield species
+        for i in self.network.nodes:
+            yield self.network.nodes[i]['species']
 
         return None
 
@@ -133,6 +119,5 @@ class System:
 
         :param args: (rksim.system.Reaction)
         """
-        self.reactions = args
 
-        self.network = make_network(self)
+        self.network = nws.make_network(args)

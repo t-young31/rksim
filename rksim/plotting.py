@@ -1,4 +1,5 @@
 import matplotlib.pyplot as plt
+import networkx as nx
 
 
 def plot(expt=None, sim=None, name=None, dpi=400):
@@ -20,6 +21,21 @@ def plot(expt=None, sim=None, name=None, dpi=400):
     plt.legend()
     plt.ylabel('Concentration / mol dm$^{-3}$')
     plt.xlabel('Time / s')
+
+    if name is not None:
+        plt.savefig(name, dpi=dpi)
+
+    else:
+        plt.show()
+
+    plt.close()
+    return None
+
+
+def plot_network(network, name=None, dpi=400):
+    """Plot a reaction network using NetworkX and matplotlib"""
+
+    nx.draw_networkx(network)
 
     if name is not None:
         plt.savefig(name, dpi=dpi)
