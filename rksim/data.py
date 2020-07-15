@@ -82,7 +82,7 @@ class Data:
     def get_best_fit(self):
         raise NotImplementedError
 
-    def assign_series(self, system):
+    def assign(self, system):
         """Assign time series to components in a system of reactions"""
 
         for time_series in self._list:
@@ -93,18 +93,17 @@ class Data:
                 # If the name of the series is the same as the species
                 # then assign it a time series
                 if time_series.name == species.name:
-                    species.time_series = time_series
+                    species.series = time_series
 
                     # Initial concentration for this component
                     node['c0'] = time_series.concentrations[0]
 
         return None
 
-    def fit(self, system):
+    def fit(self, system, optimise=True):
         """Fit a system of reactions/equations to these data"""
-        self.assign_series(system)
-
-        return fit(self, system)
+        self.assign(system)
+        return fit(self, system, optimise)
 
     def plot(self, name=None, dpi=400):
         """Plot the data with matplotlib"""

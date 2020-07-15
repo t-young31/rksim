@@ -1,7 +1,9 @@
 from rksim.systems import System
 from rksim.reactions import Irreversible, Reversible, Reaction
 from rksim.species import Reactant, Product
+from rksim.exceptions import CannotSetAttribute
 from rksim.data import Data, extract_data, TimeSeries
+import pytest
 import numpy as np
 import os
 
@@ -18,13 +20,13 @@ def test_simple_system():
     data = Data()
     data += extract_data(data_path, names=['R', 'P'])
 
-    data.assign_series(system=system)
+    data.assign(system=system)
 
     for species in system.species():
         assert species.name in ['R', 'P']
 
-        assert species.time_series is not None
-        assert isinstance(species.time_series, TimeSeries)
+        assert species.series is not None
+        assert isinstance(species.series, TimeSeries)
 
 
 def test_reaction():
@@ -190,3 +192,33 @@ def test_derivative6():
     assert np.abs(dbdt - (-k * c_b)) < 1E-8
     assert np.abs(dcdt - (k * c_a + k * c_b - k * c_c)) < 1E-8
     assert np.abs(dddt - (k * c_c)) < 1E-8
+
+
+def test_set_init_conc():
+    # R -> P
+    system = System(Irreversible(Reactant('R'), Product('P')))
+
+    system.set_initial_concentration(name='R', c=2.0)
+
+    for node in system.network.nodes:
+
+        if system.network.nodes[node]['name'] == 'R':
+            assert system.network.nodes[node]['c0'] == 2.0
+
+    # Cannot set the concentration for a species that doesn't exist
+    with pytest.raises(CannotSetAttribute):
+        system.set_initial_concentration(name='A', c=2.0)
+
+
+def test_set_rate_constant():
+    # R -> P
+    system = System(Irreversible(Reactant('R'), Product('P')))
+
+    system.set_rate_constant('R', 'P', k=2.0)
+
+    for edge in system.network.edges:
+        assert system.network.edges[edge]['k'] == 2.0
+
+    # No reverse reaction
+    with pytest.raises(CannotSetAttribute):
+        system.set_rate_constant('P', 'R', k=2.0)

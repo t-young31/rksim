@@ -15,8 +15,8 @@ class Species:
         # and P.order = 1
         self.order = 1
 
-        self.time_series = None                 # rksim.data.TimeSeries
-        self.simulated_time_series = None       # rksim.data.TimeSeries
+        self.series = None                  # rksim.data.TimeSeries
+        self.simulated_series = None        # rksim.data.TimeSeries
 
 
 class Reactant(Species):
@@ -25,5 +25,3 @@ class Reactant(Species):
 
 class Product(Species):
     """Product species e.g. P in R -> P"""
-
-

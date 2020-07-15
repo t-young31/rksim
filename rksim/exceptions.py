@@ -8,3 +8,7 @@ class DataMalformatted(Exception):
 
 class SystemNotValid(Exception):
     pass
+
+
+class CannotSetAttribute(Exception):
+    pass

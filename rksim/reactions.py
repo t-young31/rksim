@@ -10,7 +10,7 @@ class Reaction:
             if isinstance(species, species_class):
                 yield species
 
-        return None
+        return StopIteration
 
     def is_reversible(self):
         """Is this reaction reversible?"""

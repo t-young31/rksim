@@ -91,19 +91,19 @@ def test_simple_fit():
 
     system = System(Irreversible(Reactant(name='R'),
                                  Product(name='P')))
-    data.assign_series(system)
+    data.assign(system)
 
     # Ensure the initial and final concentrations are as expected
     for species in system.species():
         if species.name == 'R':
-            assert species.time_series is not None
-            assert 0.999 < species.time_series.concentrations[0] < 1.001
-            assert -0.001 < species.time_series.concentrations[-1] < 0.001
+            assert species.series is not None
+            assert 0.999 < species.series.concentrations[0] < 1.001
+            assert -0.001 < species.series.concentrations[-1] < 0.001
 
         if species.name == 'P':
-            assert species.time_series is not None
-            assert -0.001 < species.time_series.concentrations[0] < 0.001
-            assert 0.999 < species.time_series.concentrations[-1] < 1.001
+            assert species.series is not None
+            assert -0.001 < species.series.concentrations[0] < 0.001
+            assert 0.999 < species.series.concentrations[-1] < 1.001
 
     for i in system.network.nodes:
         node = system.network.nodes[i]
@@ -114,7 +114,6 @@ def test_simple_fit():
         if node['name'] == 'P':
             assert -0.001 < node['c0'] < 0.001
 
-    return
     data.fit(system)
     system.plot()
     assert os.path.exists('system.png')

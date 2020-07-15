@@ -121,13 +121,16 @@ def neighbours(graph, node_index):
     return StopIteration
 
 
-def add_reaction_edges(graph, reaction):
+def add_reaction_edges(graph, reaction, default_k=1.0):
     """
     Add edges between reactants and products on a graph. For example a
     reversible reaction R <-> P would add two directional edges
 
     :param graph: (networkx.Graph)
+
     :param reaction: (rksim.systems.Reaction)
+
+    :param default_k: (float) Default rate constant for this reaction
     """
 
     is_reversible = reaction.is_reversible()
@@ -138,12 +141,12 @@ def add_reaction_edges(graph, reaction):
             r_idx = name_to_index(reactant.name, graph)
             p_idx = name_to_index(product.name, graph)
 
-            graph.add_edge(r_idx, p_idx, k=1.0, add=False)
+            graph.add_edge(r_idx, p_idx, k=default_k, add=False)
 
             # If the reaction is reversible add a reaction edge from
             # each product to each reactant
             if is_reversible:
-                graph.add_edge(p_idx, r_idx, k=1.0, add=False)
+                graph.add_edge(p_idx, r_idx, k=default_k, add=False)
 
     return None
 
