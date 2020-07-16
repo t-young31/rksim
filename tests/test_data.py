@@ -53,7 +53,7 @@ def test_data():
     data = Data(data_path)
 
     # Test plotting the data
-    data.plot(name='test.png', dpi=100)
+    data.plot(name='test', dpi=100)
     assert os.path.exists('test.png')
     os.remove('test.png')
 
@@ -82,7 +82,7 @@ def test_data_with_names():
 
 
 def test_simple_fit():
-    data_path = os.path.join(here, 'data', 'first_order.csv')
+    data_path = os.path.join(here, 'simple_data', 'first_order.csv')
 
     data = Data()
     # Extract the data in the correct order...!

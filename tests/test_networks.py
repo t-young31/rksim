@@ -33,18 +33,6 @@ def test_reaction_network_addition():
                 if system.network.edges[edge]['add'] is True])
 
 
-def test_set_neighbours():
-
-    reaction = Irreversible(Reactant(name='A'), Reactant(name='B'),
-                            Product(name='P'))
-    system = System(reaction)
-
-    index_a = next(i for i in system.network.nodes if
-                   system.network.nodes[i]['name'] == 'A')
-
-    assert system.network.nodes[index_a]['n_neighbours'] == 1
-
-
 def test_edge_mapping():
     # A + B -> P
     reaction = Irreversible(Reactant('A'), Reactant('B'), Product('P'))

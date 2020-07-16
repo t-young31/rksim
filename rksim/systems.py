@@ -99,7 +99,6 @@ class System:
 
         :param name_i: (str) Name of a species
         :param name_j: (str) Name of a species
-        :param k: (float) Rate constant
         """
 
         edge = (nws.node_name_to_index(name_i, self.network),
@@ -153,7 +152,7 @@ class System:
         Calculate the derivative of all the concentrations with respect to time
 
         :param time: (float) Time in s at which the derivative is calculated
-                     needs to be a parameter for odeint
+                     ((needs to be a parameter for odeint))
 
         :param concentrations: (np.ndarray) array of concentrations in mol
                                dm^-3 shape = (n,) where n is the number of
@@ -166,13 +165,7 @@ class System:
             inflows = 0
             outflows = 0
 
-            # Concentration on this node
-            conc = concentrations[i]
-
-            # Product of concentrations on this node e.g. [A][B]
-            # if i == A and the reaction is A + B -> P
-            for neighbour in nws.neighbours(self.network, i):
-                conc *= concentrations[neighbour]
+            neighbours_i = list(self.network.neighbours_a(i))
 
             # Add the rate constant for all outflowing reactions
             #          P1
@@ -184,25 +177,58 @@ class System:
                 # Add the rate constant for this outflow reaction
                 # will be multiplied by [A][B] and divided by the number
                 # of neighbours + 1 i.e. the above n_neighbours = 0
-                n_neighbours = self.network.nodes[j]['n_neighbours']
 
-                outflows += self.network[i][j]['k'] / (n_neighbours + 1)
+                # Stoichiometry from i -> j
+                sto = self.network.edges[(i, j)]['sto'][0]
+                conc = sto * concentrations[i]**sto
 
-            outflows *= conc
+                # Concentrations of components on addition edges to this
+                # node that has a reaction edge to j need to be multiplied
+                for k in neighbours_i:
+
+                    if (k, j) not in self.network.edges:
+                        continue
+
+                    # Only add reaction edges between neighbours to j and i
+                    if self.network.edges[(k, j)]['add'] is True:
+                        continue
+
+                    sto = self.network.edges[(k, j)]['sto'][0]
+                    conc *= sto * concentrations[k]**sto
+
+                # Number of nodes that this outflow is distributed over
+                m = 1
+                for k in self.network.neighbours_a(j):
+                    if (i, k) in self.network.edges:
+                        m += 1
+
+                # Add the outflow as k[A]^o[B]^p
+                outflows += self.network[i][j]['k'] * conc / m
 
             # Add the rate constant for all inflowing reactions to this
-            # node for example:  A + B -> P then inflow is
+            # node for example:  A + B -> P then inflow nodes are A and B
             for j in nws.inflow_node(self.network, i):
 
-                n_j = self.network.nodes[j]['n_neighbours']
-                rate_constant = self.network[j][i]['k']
+                # Stoichiometry from j -> i as the second element in the tuple
+                sto_j, sto_i = self.network.edges[(j, i)]['sto']
+                conc = sto_i * concentrations[j]**sto_j
 
-                inflow = concentrations[j] * rate_constant / (n_j + 1)
+                # Number of nodes that this inflow comes from
+                m = 1
+                for k in self.network.neighbours_a(j):
 
-                for k in nws.neighbours(self.network, j):
-                    inflow *= concentrations[k]
+                    if (k, i) not in self.network.edges:
+                        continue
 
-                inflows += inflow
+                    # Only add reaction edges between neighbours to k and i
+                    if self.network.edges[(k, i)]['add'] is True:
+                        continue
+
+                    m += 1
+                    sto_k, sto_i = self.network.edges[(k, i)]['sto']
+                    conc *= sto_i * concentrations[k]**sto_k
+
+                inflows += conc * self.network[j][i]['k'] / m
 
             # Derivative is the inflow minus the outflow e.g.
             # R -> P  d[R]/dt = -k[R], d[P]/dt = k[R]
@@ -220,11 +246,7 @@ class System:
 
     def plot(self, name='system', dpi=400):
         """Plot both the simulated and experimental data for this system"""
-
-        expt_series = [species.series for species in self.species()]
-        sim_series = [species.simulated_series for species in self.species()]
-
-        return plot(expt_series, sim_series, name=name, dpi=dpi)
+        return plot(self.species(), name=name, dpi=dpi)
 
     def __init__(self, *args):
         """

@@ -18,7 +18,7 @@ class Network(nx.DiGraph):
             for s1, s2 in (species, reversed(species)):
                 self.add_edge(node_name_to_index(s1.name, self),
                               node_name_to_index(s2.name, self),
-                              add=True, k=None)
+                              add=True, k=None, sto=None)
 
         if len(species) > 2:
             raise NotImplementedError
@@ -41,13 +41,16 @@ class Network(nx.DiGraph):
                 r_idx = node_name_to_index(reactant.name, self)
                 p_idx = node_name_to_index(product.name, self)
 
-                self.add_edge(r_idx, p_idx, k=default_k, add=False)
+                # Change in stoichiometry e.g. 2R -> P would have (2, 1)
+                sto = (reactant.stoichiometry, product.stoichiometry)
+
+                self.add_edge(r_idx, p_idx, k=default_k, add=False, sto=sto)
 
                 # If the reaction is reversible add a reaction edge from
                 # each product to each reactant
                 if is_reversible:
-                    self.add_edge(p_idx, r_idx, k=default_k, add=False)
-
+                    self.add_edge(p_idx, r_idx, k=default_k, add=False,
+                                  sto=tuple(reversed(sto)))
         return None
 
     def set_edge_mapping(self):
@@ -86,7 +89,7 @@ class Network(nx.DiGraph):
 
             # Iterate through the neighbours to node i, above if i = A then
             # B is a neighbour
-            for neighbour in neighbours(self, i):
+            for neighbour in self.neighbours_a(i):
 
                 # If the neighbour has a reaction edge to the same end point
                 # (which cannot be an add edge) then the rate constants need
@@ -97,8 +100,8 @@ class Network(nx.DiGraph):
             # Add reaction edges that are neighbours to both i and j e.g.
             # A + B -> C + D where i = A and j = C then this adds an edge
             # to edges_same_k between B and D
-            for neighbour_i in neighbours(self, i):
-                for neighbour_j in neighbours(self, j):
+            for neighbour_i in self.neighbours_a(i):
+                for neighbour_j in self.neighbours_a(j):
                     n_edge = (neighbour_i, neighbour_j)
 
                     # If this reaction edge exists
@@ -108,7 +111,7 @@ class Network(nx.DiGraph):
             # Likewise with neighbours to j if i = R for a reaction R -> C + D
             # here i = R and j = C then an edges_same_k will be added between
             # R and D
-            for neighbour in neighbours(self, j):
+            for neighbour in self.neighbours_a(j):
                 if (i, neighbour) in self.edges:
                     edges_same_k.append((i, neighbour))
 
@@ -124,6 +127,27 @@ class Network(nx.DiGraph):
         nx.draw_networkx(self)
 
         return show_or_plot(name, dpi)
+
+    def neighbours_a(self, node_index):
+        """
+        Get the neighbours along addition edges next to this atom. For example
+        a graph
+
+            +
+        A ----- B
+
+        where A is indexed 0 and B 1 then get_add_neighbours(graph, 0) -> [1]
+
+        :param node_index: (int)
+        :return: (int)
+        """
+        for i, j, is_add_edge in self.edges(data='add'):
+
+            # No need to consider the reverse as both
+            if is_add_edge and i == node_index:
+                yield j
+
+        return StopIteration
 
     def __init__(self):
         """Subclass of networkx.Graph"""
@@ -147,10 +171,12 @@ def make_network(reactions):
           +
 
     where the arrowed edges have an associated rate constant attribute (k)
-    and the addition edge between A and B has add=True
+    and the addition edge between A and B has add=True. A reaction edge also
+    has a stoichiometry associated with it (e.g. 2C -> D would have sto=2
+    for the reaction edge).
 
     :param reactions: (list(rksim.systems.Reaction))
-    :return: (networkx.Graph)
+    :return: (rksim.networks.Network)
     """
     network = Network()
 
@@ -165,9 +191,6 @@ def make_network(reactions):
         # Add reaction arrow(s) with associated rate constant (k) values
         network.add_reaction_edges(reaction)
 
-    # Set the number of + edges on each node
-    populate_neighbour_number(network)
-
     # Set the mapping for unique rate constants onto edges
     network.set_edge_mapping()
 
@@ -178,7 +201,7 @@ def inflow_node(network, node_index):
     """
     Get a nodes that flows into a node_index
 
-    :param network: (networkx.Graph)
+    :param network: (rksim.networks.Network)
     :param node_index: (int)
     """
     for j in network.predecessors(node_index):
@@ -192,65 +215,11 @@ def outflow_node(network, node_index):
     """
     Get a nodes that flows from a node_index
 
-    :param network: (networkx.Graph)
+    :param network: (rksim.networks.Network)
     :param node_index: (int)
     """
     for j in network.successors(node_index):
         if network[node_index][j]['add'] is False:
-            yield j
-
-    return StopIteration
-
-
-def populate_neighbour_number(network):
-    """
-    Populate the number of neighbours over add edges for a reaction graph
-
-           P
-          ^ ^
-         /  \
-       /     \
-      A ----- B
-          +
-
-    P_n_neighbours = 0, A_n_neighbours = 1, B_n_neighbours = 1
-
-    :param network: (networkx.Graph)
-    """
-    neighbours_dict = {}
-
-    for node in network.nodes:
-        n_neighbours = 0
-
-        for neighbour in network.neighbors(node):
-            if network[node][neighbour]['add']:
-                n_neighbours += 1
-
-        neighbours_dict[node] = n_neighbours
-
-    # Set the number of neighbours for each species in the network/graph
-    nx.set_node_attributes(network, neighbours_dict, name='n_neighbours')
-    return None
-
-
-def neighbours(network, node_index):
-    """
-    Get the neighbours along addition edges next to this atom. For example
-    a graph
-
-        +
-    A ----- B
-
-    where A is indexed 0 and B 1 then get_add_neighbours(graph, 0) -> [1]
-
-    :param network: (networkx.Graph)
-    :param node_index: (int)
-    :return: (list(int))
-    """
-    for i, j, is_add_edge in network.edges(data='add'):
-
-        # No need to consider the reverse as both
-        if is_add_edge and i == node_index:
             yield j
 
     return StopIteration
@@ -270,7 +239,7 @@ def add_nodes(network, reactions):
     """
     Add nodes to a graph as species from a list of reactions
 
-    :param network: (networkx.Graph)
+    :param network: (rksim.networks.Network)
     :param reactions: (list(rksim.systems.Reaction))
     """
     # List to ensure no species is added more than once to the network
@@ -282,10 +251,6 @@ def add_nodes(network, reactions):
     for reaction in reactions:
         for species in reaction.components:
 
-            if species.order != 1:
-                # TODO allow larger orders
-                raise NotImplementedError
-
             # Skip adding the node if already added
             if species.name in added_names:
                 continue
@@ -294,9 +259,9 @@ def add_nodes(network, reactions):
             added_names.append(species.name)
 
             # Add the node and step the iterator
-            network.add_node(n,  # index of the node
-                             name=species.name,  # name of the node
-                             c0=1E-8,  # initial concentration
+            network.add_node(n,                       # index of the node
+                             name=species.name,       # name of the node
+                             c0=1E-8,                 # initial concentration
                              species=species)         # rksim.species.Species
             n += 1
 

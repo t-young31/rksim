@@ -48,7 +48,6 @@ def test_simple():
 
 def test_simple_reversible():
     # R <-> P
-
     system = System(Reversible(Reactant('R'), Product('P')))
     system.set_rate_constants(k=1.0)
 
@@ -71,3 +70,25 @@ def test_simple_reversible():
 
     kb = system.get_rate_constant('P', 'R')
     assert np.abs(kb - 0.1) < 1E-3
+
+
+def test_simple_alt():
+    # B <-- A --> C
+    system = System(Irreversible(Reactant('A'), Product('B')),
+                    Irreversible(Reactant('A'), Product('C')))
+    system.set_rate_constants(k=1.0)
+
+    data_path = os.path.join(here, 'simple_data', 'double_first_order.csv')
+    data = Data()
+    data += extract_data(filename=data_path, names=['A', 'B', 'C'])
+
+    data.fit(system)
+    # system.plot(name='double_first_order')
+
+    # Should be able to fit these data well
+    mse = system.get_mse()
+    assert np.abs(mse) < 1E-3
+
+    # Data generated with: k1 = 0.4, k2 = 0.8
+    assert np.abs(system.get_rate_constant('A', 'B') - 0.4) < 1E-2
+    assert np.abs(system.get_rate_constant('A', 'C') - 0.8) < 1E-2

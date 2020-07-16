@@ -107,7 +107,7 @@ class Data:
 
     def plot(self, name=None, dpi=400):
         """Plot the data with matplotlib"""
-        return plot(expt=self._list, name=name, dpi=dpi)
+        return plot(self._list, name=name, dpi=dpi)
 
     def __init__(self, *args):
         """
@@ -238,10 +238,14 @@ def get_raw_data_from_csv(csv_file):
         # Try and convert all the items in this row of the csv to a float,
         # continue if this is not possible
         try:
-            row = [float(item) for item in items]
+            # Remove any whitespace from the data
+            row = [float(item.strip()) for item in items]
             array.append(row)
 
         except ValueError:
             continue
+
+    if len(array) == 0:
+        raise ex.DataMalformatted
 
     return np.array(array)

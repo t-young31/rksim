@@ -3,6 +3,7 @@ from rksim.reactions import Irreversible, Reversible, Reaction
 from rksim.species import Reactant, Product
 from rksim.exceptions import CannotSetAttribute
 from rksim.data import Data, extract_data, TimeSeries
+from rksim.networks import node_name_to_index
 import pytest
 import numpy as np
 import os
@@ -34,16 +35,16 @@ def test_reaction():
     reaction = Reaction(Reactant(name='R'), Reactant(name='R'),
                         Product(name='P'))
 
-    # Reaction on;y has two compoents, R is repeated
+    # Reaction on;y has two components, R is repeated
     assert len(reaction.components) == 2
 
-    # R^2 -> P
+    # 2R -> P
     for species in reaction.components:
         if species.name == 'R':
-            assert species.order == 2
+            assert species.stoichiometry == 2
 
         if species.name == 'P':
-            assert species.order == 1
+            assert species.stoichiometry == 1
 
 
 def test_species():
@@ -192,6 +193,41 @@ def test_derivative6():
     assert np.abs(dbdt - (-k * c_b)) < 1E-8
     assert np.abs(dcdt - (k * c_a + k * c_b - k * c_c)) < 1E-8
     assert np.abs(dddt - (k * c_c)) < 1E-8
+
+
+def test_derivative7():
+    # 2A -> B
+    system = System(Irreversible(Reactant('A'), Reactant('A'),
+                                 Product('B')))
+    k = 1.0
+    system.set_rate_constants(k=k)
+
+    # Check the graph has the correct order in this component
+    a_index = node_name_to_index('A', system.network)
+    b_index = node_name_to_index('B', system.network)
+    assert system.network.edges[(a_index, b_index)]['sto'] == (2, 1)
+
+    c_a, c_b = [2.0, 0.5]
+
+    dadt, dbdt = system.derivative([c_a, c_b])
+
+    assert np.abs(dadt - (-2 * k * c_a**2)) < 1E-8
+    assert np.abs(dbdt - (k * c_a**2)) < 1E-8
+
+
+def test_derivative8():
+    # A -> 2B
+    system = System(Irreversible(Reactant('A'),
+                                 Product('B'), Product('B')))
+    k = 1.0
+    system.set_rate_constants(k=k)
+
+    c_a, c_b = [2.0, 0.5]
+
+    dadt, dbdt = system.derivative([c_a, c_b])
+
+    assert np.abs(dadt - (-k * c_a)) < 1E-8
+    assert np.abs(dbdt - (+2.0 * k * c_a)) < 1E-8
 
 
 def test_set_init_conc():

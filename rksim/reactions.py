@@ -41,7 +41,7 @@ class Reaction:
 
             # The order in this species is the number of times it appears
             # as either a reactant or product
-            species.order = len(identical_species)
+            species.stoichiometry = len(identical_species)
 
             self.components.append(species)
 

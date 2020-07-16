@@ -11,9 +11,9 @@ class Species:
         """
         self.name = name
 
-        # Order of species in a reaction e.g. R + R -> P, R.order = 2
-        # and P.order = 1
-        self.order = 1
+        # Stoichiometry of species in a reaction e.g. R + R -> P,
+        # R.stoichiometry = 2 and P.stoichiometry = 1
+        self.stoichiometry = 1
 
         self.series = None                  # rksim.data.TimeSeries
         self.simulated_series = None        # rksim.data.TimeSeries
