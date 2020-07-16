@@ -12,3 +12,7 @@ class SystemNotValid(Exception):
 
 class CannotSetAttribute(Exception):
     pass
+
+
+class CannotGetAttribute(Exception):
+    pass

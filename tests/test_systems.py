@@ -15,7 +15,7 @@ def test_simple_system():
     system = System(Irreversible(Reactant(name='R'),
                                  Product(name='P')))
 
-    data_path = os.path.join(here, 'data', 'first_order.csv')
+    data_path = os.path.join(here, 'simple_data', 'first_order.csv')
 
     data = Data()
     data += extract_data(data_path, names=['R', 'P'])
@@ -101,7 +101,7 @@ def test_derivative2():
     system = System(Irreversible(Reactant(name='A'), Reactant(name='B'),
                                  Product(name='C')))
     k = 1.0
-    system.set_rate_constants(k)
+    system.set_rate_constants(k=k)
 
     possible_concentrations = [[2.0, 1.0, 0.0],
                                [0.0, 1.0, 0.0],
@@ -122,7 +122,7 @@ def test_derivative3():
     system = System(Irreversible(Reactant(name='A'),
                                  Product(name='B'), Product(name='C')))
     k = 1.0
-    system.set_rate_constants(k)
+    system.set_rate_constants(k=k)
     c_a, c_b, c_c = [2.0, 1.0, 0.0]
 
     dadt, dbdt, dcdt = system.derivative([c_a, c_b, c_c])
@@ -139,7 +139,7 @@ def test_derivative4():
                                Product(name='P')))
 
     kf = kb = 1.0
-    system.set_rate_constants(kf)
+    system.set_rate_constants(k=kf)
 
     #                          [P]   [R]
     possible_concentrations = [[1.0, 0.0],
@@ -160,7 +160,7 @@ def test_derivative5():
     system = System(Reversible(Reactant(name='A'), Reactant(name='B'),
                                Product(name='C'), Product(name='D')))
     k = 1.0
-    system.set_rate_constants(k)
+    system.set_rate_constants(k=k)
     c_a, c_b, c_c, c_d = [2.0, 1.0, 0.2, 0.1]
 
     dadt, dbdt, dcdt, dddt = system.derivative([c_a, c_b, c_c, c_d])
@@ -181,7 +181,7 @@ def test_derivative6():
                     Irreversible(Reactant('B'), Product('C')),
                     Irreversible(Reactant('C'), Product('D')))
     k = 1.0
-    system.set_rate_constants(k)
+    system.set_rate_constants(k=k)
 
     #                     A    C   B    D
     c_a, c_c, c_b, c_d = [1.0, 2.0, 0.5, 0.0]

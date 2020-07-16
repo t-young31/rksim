@@ -45,11 +45,11 @@ def test_data():
         _ = Data('a_filename_that_doesnt_exist')
 
     with pytest.raises(DataMalformatted):
-        data_path = os.path.join(here, 'data', 'first_order_broken.csv')
+        data_path = os.path.join(here, 'simple_data', 'first_order_broken.csv')
         _ = Data(data_path)
 
     # First order kinetic data
-    data_path = os.path.join(here, 'data', 'first_order.csv')
+    data_path = os.path.join(here, 'simple_data', 'first_order.csv')
     data = Data(data_path)
 
     # Test plotting the data
@@ -61,7 +61,7 @@ def test_data():
 def test_data_with_names():
 
     # Two column data of R and P
-    data_path = os.path.join(here, 'data', 'first_order.csv')
+    data_path = os.path.join(here, 'simple_data', 'first_order.csv')
 
     data = Data()
     data += extract_data(data_path, names=['R', 'P'])
@@ -70,7 +70,8 @@ def test_data_with_names():
     assert data[1].name == 'P'
 
     # Single column data
-    data_path = os.path.join(here, 'data', 'first_order_only_product.csv')
+    data_path = os.path.join(here, 'simple_data',
+                             'first_order_only_product.csv')
 
     data = Data()
     series = extract_data(data_path, name='P')

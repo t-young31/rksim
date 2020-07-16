@@ -3,6 +3,7 @@ from rksim.data import TimeSeries
 import rksim.networks as nws
 from rksim.plotting import plot
 from rksim.exceptions import CannotSetAttribute
+from rksim.exceptions import CannotGetAttribute
 
 
 class System:
@@ -43,16 +44,33 @@ class System:
 
     def get_rate_constants(self):
         """Get a numpy array of rate constants"""
+        ks = []
 
-        # Make a mapping....
-        raise NotImplementedError
+        for edges in self.network.edge_mapping.values():
+            # All the edges in this set have the same k, so use the first
+            i, j = next(iter(edges))
+            ks.append(self.network[i][j]['k'])
 
-        return
+        return np.array(ks)
 
-    def set_rate_constants(self, k=1.0):
-        """Set initial rate constants"""
+    def set_rate_constants(self, ks=None, k=None):
+        """Set rate constants
 
-        # self.network.edges[edge]['k'] = k
+        :param ks: (np.ndarray) shape = (n,) where n is the number of unique
+                   rate constants in the reaction network
+
+        :param k: (float) Rate constant to set all ks as
+        """
+        # Number of unique edges
+        n_edges = len(self.network.edge_mapping)
+
+        ks = ks if ks is not None else n_edges * [k]
+        assert len(ks) == n_edges
+
+        # Set all the equivalent edges with the specified rate constants
+        for n, edges in enumerate(self.network.edge_mapping.values()):
+            for (i, j) in edges:
+                self.network[i][j]['k'] = ks[n]
 
         return None
 
@@ -65,14 +83,32 @@ class System:
         :param c: (float) Concentration (mol dm^-3)
         """
 
-        for i in self.network.nodes:
-            node = self.network.nodes[i]
+        node_index = nws.node_name_to_index(name, self.network)
 
-            if node['name'] == name:
-                node['c0'] = float(c)
-                return
+        if node_index not in self.network.nodes:
+            raise CannotSetAttribute('Species not found in the network')
 
-        raise CannotSetAttribute('Species not found in the network')
+        # Set the value
+        self.network.nodes[node_index]['c0'] = float(c)
+        return None
+
+    def get_rate_constant(self, name_i, name_j):
+        """
+        Set the rate constant (k) between a species i and j in the
+        reaction network is directional so i -> j rate constant
+
+        :param name_i: (str) Name of a species
+        :param name_j: (str) Name of a species
+        :param k: (float) Rate constant
+        """
+
+        edge = (nws.node_name_to_index(name_i, self.network),
+                nws.node_name_to_index(name_j, self.network))
+
+        if edge not in self.network.edges:
+            raise CannotGetAttribute('Reaction not found in the network')
+
+        return self.network.edges[edge]['k']
 
     def set_rate_constant(self, name_i, name_j, k):
         """
@@ -84,18 +120,14 @@ class System:
         :param k: (float) Rate constant
         """
 
-        for edge in self.network.edges:
+        edge = (nws.node_name_to_index(name_i, self.network),
+                nws.node_name_to_index(name_j, self.network))
 
-            i, j = edge
-            # If the names of the nodes are those specified then
-            # set the rate constant between them
-            if (self.network.nodes[i]['name'] == name_i and
-                    self.network.nodes[j]['name'] == name_j):
+        if edge not in self.network.edges:
+            raise CannotSetAttribute('Reaction not found in the network')
 
-                self.network.edges[edge]['k'] = k
-                return
-
-        raise CannotSetAttribute('Reaction not found in the network')
+        self.network.edges[edge]['k'] = k
+        return None
 
     def set_simulated(self, concentrations, times):
         """
@@ -121,6 +153,7 @@ class System:
         Calculate the derivative of all the concentrations with respect to time
 
         :param time: (float) Time in s at which the derivative is calculated
+                     needs to be a parameter for odeint
 
         :param concentrations: (np.ndarray) array of concentrations in mol
                                dm^-3 shape = (n,) where n is the number of
