@@ -75,12 +75,12 @@ class Data:
     def __iter__(self):
         return iter(self._list)
 
-    def get_max_time(self):
+    def __len__(self):
+        return len(self._list)
+
+    def max_time(self):
         """Get the maximum time found in these data"""
         return max(series.times[-1] for series in self._list)
-
-    def get_best_fit(self):
-        raise NotImplementedError
 
     def assign(self, system):
         """Assign time series to components in a system of reactions"""
@@ -230,10 +230,6 @@ def get_raw_data_from_csv(csv_file):
 
     for line in csv_file:
         items = line.split(',')
-
-        # Data requires at least two columns, time and concentration
-        if len(items) < 2:
-            continue
 
         # Try and convert all the items in this row of the csv to a float,
         # continue if this is not possible

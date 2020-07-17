@@ -2,7 +2,6 @@ from rksim.reactions import Irreversible
 from rksim.systems import System
 from rksim.species import Reactant, Product
 from rksim.data import Data, extract_data
-from rksim.networks import node_name_to_index
 import numpy as np
 import os
 
@@ -14,8 +13,8 @@ def test_simple():
     reaction = Irreversible(Reactant('R'), Reactant('R'), Product('P'))
     system = System(reaction)
 
-    r_index = node_name_to_index('R', system.network)
-    p_index = node_name_to_index('P', system.network)
+    r_index = system.network.node_mapping['R']
+    p_index = system.network.node_mapping['P']
 
     # Change in stoichiometry is 2 -> 1 along this reaction edge
     assert system.network.edges[(r_index, p_index)]['sto'] == (2, 1)
@@ -25,13 +24,38 @@ def test_simple():
     data += extract_data(filename=data_path, names=['R', 'P'])
 
     data.fit(system)
-
     # system.plot(name='2nd_order')
 
     # Should be able to fit the second order data
-    assert np.abs(system.get_mse()) < 1E-3
+    assert np.abs(system.mse()) < 1E-3
 
     # Check the initial concentrations and rate constants are as expected.
     # Generated with:  r0 = 0.6,  k = 2
     assert system.network.nodes[r_index]['c0'] == 0.6
-    assert np.abs(system.get_rate_constant('R', 'P') - 2.0) < 1E-2
+    assert np.abs(system.rate_constant('R', 'P') - 2.0) < 1E-2
+
+
+def test_ab_reaction():
+
+    reaction = Irreversible(Reactant('A'), Reactant('B'),
+                            Product('P'))
+
+    system = System(reaction)
+
+    data_path = os.path.join(here, 'higher_order_data', 'ab.csv')
+    data = Data()
+    data += extract_data(filename=data_path, names=['A', 'B', 'P'])
+
+    data.fit(system)
+    # system.plot(name='a_b')
+
+    # Should be able to fit the data well
+    assert np.abs(system.mse()) < 1E-2
+
+    # Data generated with k = 1.7 s^-2 mol^-1 dm^3
+    assert np.abs(system.rate_constant('A', 'P') - 1.7) < 1E-2
+    assert np.abs(system.rate_constant('B', 'P') - 1.7) < 1E-2
+
+    ks = system.rate_constants()
+    assert len(ks) == 1
+    assert np.abs(ks[0] - 1.7) < 1E-2

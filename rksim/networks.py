@@ -16,8 +16,8 @@ class Network(nx.DiGraph):
         if len(species) == 2:
             # Add an addition edge forwards and backwards between the group
             for s1, s2 in (species, reversed(species)):
-                self.add_edge(node_name_to_index(s1.name, self),
-                              node_name_to_index(s2.name, self),
+                self.add_edge(self.node_mapping[s1.name],
+                              self.node_mapping[s2.name],
                               add=True, k=None, sto=None)
 
         if len(species) > 2:
@@ -38,8 +38,8 @@ class Network(nx.DiGraph):
         for reactant in reaction.reactants():
             for product in reaction.products():
 
-                r_idx = node_name_to_index(reactant.name, self)
-                p_idx = node_name_to_index(product.name, self)
+                r_idx = self.node_mapping[reactant.name]
+                p_idx = self.node_mapping[product.name]
 
                 # Change in stoichiometry e.g. 2R -> P would have (2, 1)
                 sto = (reactant.stoichiometry, product.stoichiometry)
@@ -122,6 +122,21 @@ class Network(nx.DiGraph):
 
         return None
 
+    def set_node_mapping(self):
+        """Set the mapping from node names to indexes"""
+        self.node_mapping = {}
+
+        for i in self.nodes:
+            name = self.nodes[i]['name']
+            self.node_mapping[name] = i
+
+        return None
+
+    def get_edge(self, name_i, name_j):
+        """Get an edge give names of the nodes i -> j"""
+        edge = (self.node_mapping[name_i], self.node_mapping[name_j])
+        return self.edges[edge]
+
     def plot(self, name=None, dpi=400):
         """Plot a reaction network using NetworkX and matplotlib"""
         nx.draw_networkx(self)
@@ -150,9 +165,11 @@ class Network(nx.DiGraph):
         return StopIteration
 
     def __init__(self):
-        """Subclass of networkx.Graph"""
+        """Subclass of networkx.Graph. Once initialised then calling
+         self.add_node() or self.add_edge() will break the mappings"""
         super().__init__()
 
+        self.node_mapping = None
         self.edge_mapping = None
 
 
@@ -225,16 +242,6 @@ def outflow_node(network, node_index):
     return StopIteration
 
 
-def node_name_to_index(name, graph):
-    """Get the index of a node given it's name"""
-
-    for i in graph.nodes:
-        if graph.nodes[i]['name'] == name:
-            return i
-
-    return None
-
-
 def add_nodes(network, reactions):
     """
     Add nodes to a graph as species from a list of reactions
@@ -265,4 +272,6 @@ def add_nodes(network, reactions):
                              species=species)         # rksim.species.Species
             n += 1
 
+    # Set the mapping between node names and node indexes
+    network.set_node_mapping()
     return None

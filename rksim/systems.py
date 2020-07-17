@@ -11,7 +11,7 @@ class System:
     def __str__(self):
         return f'{[species.name for species in self.species()]}'
 
-    def get_mse(self):
+    def mse(self):
         """
         Calculate the mean squared error between the
         true concentrations and the simulated concentrations
@@ -42,7 +42,7 @@ class System:
 
         return mse
 
-    def get_rate_constants(self):
+    def rate_constants(self):
         """Get a numpy array of rate constants"""
         ks = []
 
@@ -82,17 +82,17 @@ class System:
         :param name: (str) Name of the species
         :param c: (float) Concentration (mol dm^-3)
         """
+        try:
+            node_index = self.network.node_mapping[name]
 
-        node_index = nws.node_name_to_index(name, self.network)
-
-        if node_index not in self.network.nodes:
+        except KeyError:
             raise CannotSetAttribute('Species not found in the network')
 
         # Set the value
         self.network.nodes[node_index]['c0'] = float(c)
         return None
 
-    def get_rate_constant(self, name_i, name_j):
+    def rate_constant(self, name_i, name_j):
         """
         Set the rate constant (k) between a species i and j in the
         reaction network is directional so i -> j rate constant
@@ -100,14 +100,12 @@ class System:
         :param name_i: (str) Name of a species
         :param name_j: (str) Name of a species
         """
+        try:
+            edge = self.network.get_edge(name_i, name_j)
+            return edge['k']
 
-        edge = (nws.node_name_to_index(name_i, self.network),
-                nws.node_name_to_index(name_j, self.network))
-
-        if edge not in self.network.edges:
+        except KeyError:
             raise CannotGetAttribute('Reaction not found in the network')
-
-        return self.network.edges[edge]['k']
 
     def set_rate_constant(self, name_i, name_j, k):
         """
@@ -118,15 +116,12 @@ class System:
         :param name_j: (str) Name of a species
         :param k: (float) Rate constant
         """
+        try:
+            edge = self.network.get_edge(name_i, name_j)
+            edge['k'] = k
 
-        edge = (nws.node_name_to_index(name_i, self.network),
-                nws.node_name_to_index(name_j, self.network))
-
-        if edge not in self.network.edges:
+        except KeyError:
             raise CannotSetAttribute('Reaction not found in the network')
-
-        self.network.edges[edge]['k'] = k
-        return None
 
     def set_simulated(self, concentrations, times):
         """
@@ -141,6 +136,8 @@ class System:
         """
         for i, species in enumerate(self.species()):
 
+            # Concentrations are a matrix of time points as the rows and
+            # columns as the different species
             concs = concentrations[:, i]
             species.simulated_series = TimeSeries(name=species.name,
                                                   times=times,

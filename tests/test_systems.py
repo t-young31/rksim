@@ -1,9 +1,8 @@
 from rksim.systems import System
 from rksim.reactions import Irreversible, Reversible, Reaction
 from rksim.species import Reactant, Product
-from rksim.exceptions import CannotSetAttribute
+from rksim.exceptions import CannotSetAttribute, CannotGetAttribute
 from rksim.data import Data, extract_data, TimeSeries
-from rksim.networks import node_name_to_index
 import pytest
 import numpy as np
 import os
@@ -28,6 +27,13 @@ def test_simple_system():
 
         assert species.series is not None
         assert isinstance(species.series, TimeSeries)
+
+
+def test_mse():
+    system = System(Irreversible(Reactant('R'), Product('P')))
+
+    # System not assigned to any data shouldn't have any mean squared error
+    assert system.mse() == 0
 
 
 def test_reaction():
@@ -203,8 +209,8 @@ def test_derivative7():
     system.set_rate_constants(k=k)
 
     # Check the graph has the correct order in this component
-    a_index = node_name_to_index('A', system.network)
-    b_index = node_name_to_index('B', system.network)
+    a_index = system.network.node_mapping['A']
+    b_index = system.network.node_mapping['B']
     assert system.network.edges[(a_index, b_index)]['sto'] == (2, 1)
 
     c_a, c_b = [2.0, 0.5]
@@ -258,3 +264,13 @@ def test_set_rate_constant():
     # No reverse reaction
     with pytest.raises(CannotSetAttribute):
         system.set_rate_constant('P', 'R', k=2.0)
+
+
+def test_get_rate_constant():
+
+    system = System(Irreversible(Reactant('R'), Product('P')))
+
+    assert system.rate_constant('R', 'P') is not None
+
+    with pytest.raises(CannotGetAttribute):
+        system.rate_constant('X', 'Y')

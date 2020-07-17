@@ -16,3 +16,7 @@ class CannotSetAttribute(Exception):
 
 class CannotGetAttribute(Exception):
     pass
+
+
+class PlottingFailed(Exception):
+    pass

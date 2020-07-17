@@ -25,7 +25,7 @@ def test_simple():
 
     # Data is generated with k = 1.0 so the simulated should be essentially
     # exact
-    mse = system.get_mse()
+    mse = system.mse()
     assert np.abs(mse) < 1E-3
 
     # -----------------------------------------------------------------------
@@ -34,7 +34,7 @@ def test_simple():
     system.set_rate_constants(k=2.0)
     data.fit(system, optimise=False)
     # system.plot(name='simple_non_fitted')
-    assert np.abs(system.get_mse()) > 1
+    assert np.abs(system.mse()) > 1
 
     # ----------------------------------------------------------------------
     # Swapping rate constants should a small error when optimised
@@ -43,7 +43,7 @@ def test_simple():
     data.fit(system, optimise=True)
     # system.plot(name='simple_fitted')
 
-    assert np.abs(system.get_mse()) < 1E-3
+    assert np.abs(system.mse()) < 1E-3
 
 
 def test_simple_reversible():
@@ -61,14 +61,14 @@ def test_simple_reversible():
     data.fit(system, optimise=True)
     # system.plot(name='simple_reversible')
 
-    mse = system.get_mse()
+    mse = system.mse()
     assert np.abs(mse) < 1E-3
 
     # Data generated with kf = 0.5,  kb = 0.1
-    kf = system.get_rate_constant('R', 'P')
+    kf = system.rate_constant('R', 'P')
     assert np.abs(kf - 0.5) < 1E-3
 
-    kb = system.get_rate_constant('P', 'R')
+    kb = system.rate_constant('P', 'R')
     assert np.abs(kb - 0.1) < 1E-3
 
 
@@ -86,9 +86,9 @@ def test_simple_alt():
     # system.plot(name='double_first_order')
 
     # Should be able to fit these data well
-    mse = system.get_mse()
+    mse = system.mse()
     assert np.abs(mse) < 1E-3
 
     # Data generated with: k1 = 0.4, k2 = 0.8
-    assert np.abs(system.get_rate_constant('A', 'B') - 0.4) < 1E-2
-    assert np.abs(system.get_rate_constant('A', 'C') - 0.8) < 1E-2
+    assert np.abs(system.rate_constant('A', 'B') - 0.4) < 1E-2
+    assert np.abs(system.rate_constant('A', 'C') - 0.8) < 1E-2

@@ -19,7 +19,7 @@ def fit(data, system, optimise):
     init_concs = [system.network.nodes[i]['c0'] for i in system.network.nodes]
 
     # Array of times along which the ODE will be solved
-    times = np.linspace(0.0, data.get_max_time(), num=1000)
+    times = np.linspace(0.0, data.max_time(), num=1000)
 
     if optimise:
         optimise_rate_constants(system, times, init_concs)
@@ -45,7 +45,7 @@ def optimise_rate_constants(system, times, init_concs):
     :param init_concs: (np.ndarray) Initial concentrations (mol dm^-3)
     """
 
-    init_ks = system.get_rate_constants()
+    init_ks = system.rate_constants()
 
     # Minimise the error and set the optimise rate constants
     result = minimize(mse, x0=init_ks, args=(system, times, init_concs))
@@ -63,4 +63,4 @@ def mse(rate_constants, system, times, init_concs):
     concs = odeint(system.derivative, init_concs, times)
     system.set_simulated(concs, times)
 
-    return system.get_mse()
+    return system.mse()

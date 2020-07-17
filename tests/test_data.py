@@ -45,17 +45,44 @@ def test_data():
         _ = Data('a_filename_that_doesnt_exist')
 
     with pytest.raises(DataMalformatted):
-        data_path = os.path.join(here, 'simple_data', 'first_order_broken.csv')
+        data_path = os.path.join(here, 'broken_data', 'missing_value.csv')
         _ = Data(data_path)
+
+    with pytest.raises(DataMalformatted):
+        data_path = os.path.join(here, 'broken_data', 'no_concs.csv')
+        _ = Data(data_path)
+
+    with pytest.raises(DataMalformatted):
+        data_path = os.path.join(here, 'broken_data', 'no_data.csv')
+        _ = Data(data_path)
+
+    # Should admit malformatted row - just skipped over
+    data_path = os.path.join(here, 'broken_data', 'text_value.csv')
+    data = Data(data_path)
+    assert len(data[0].times) == 13
+    assert len(data[0].concentrations) == 13
 
     # First order kinetic data
     data_path = os.path.join(here, 'simple_data', 'first_order.csv')
     data = Data(data_path)
 
+    # Should be able to iterate through a set of data
+    for series in data:
+        assert series is not None
+
     # Test plotting the data
     data.plot(name='test', dpi=100)
     assert os.path.exists('test.png')
     os.remove('test.png')
+
+    # Test adding two sets of data
+    directory = os.path.join(here, 'simple_data')
+
+    data1 = Data(os.path.join(directory, 'first_order_only_reactant.csv'))
+    data2 = Data(os.path.join(directory, 'first_order_only_product.csv'))
+    data2 += data1
+    assert len(data) == 2
+    assert np.abs(data.max_time() - 10) < 1E-8
 
 
 def test_data_with_names():
@@ -88,7 +115,7 @@ def test_simple_fit():
     # Extract the data in the correct order...!
     data += extract_data(data_path, names=['P', 'R'])
 
-    assert 9.9 < data.get_max_time() < 10.1
+    assert 9.9 < data.max_time() < 10.1
 
     system = System(Irreversible(Reactant(name='R'),
                                  Product(name='P')))
