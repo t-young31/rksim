@@ -59,7 +59,7 @@ def generate_reversible_1st_order_data():
     return None
 
 
-def generate_two_first_1st_order_reaction_data():
+def generate_two_1st_order_data():
     """
     Generate data for two first order reactions. A -> B and A -> C i.e.
     the network: B <-- A --> C
@@ -94,8 +94,51 @@ def generate_two_first_1st_order_reaction_data():
     return None
 
 
+def generate_consecutive_data():
+    """
+    Generate data for A --> B --> C
+                         k1   k2
+
+    d[A]/dt = -k1 [A]          :   [A] = [A]0 e^(-t k1)
+
+    d[B]/dt = k1[A] - k2[B]    :
+    [B] = [A]0 (k1 / (k2 - k1)) (e^(-t k1) - e^(-t k2)) + [B]0e^(-t k2)
+
+    d[C]/dt = k2[B]            :
+    [C] = [A]0 (1 + ((k1e^(-t k2) - k2e^(-t k1)) / (k2 - k1)) +
+          [B]0(1 - e^(-t k2)) + [C]0
+    """
+    times = np.linspace(0, 10, num=50)  # s
+
+    a0 = 2.0  # mol dm^-3
+    b0 = 1.7  # mol dm^-3
+    c0 = 0.1  # mol dm^-3
+
+    k1 = 0.5  # s^-1
+    k2 = 0.8  # s^-1
+
+    with open('consecutive_first_order.csv', 'w') as data_file:
+        print('Data for A --> B --> C', file=data_file)
+
+        for t in times:
+            exp1 = np.exp(-t * k1)
+            exp2 = np.exp(-t * k2)
+
+            a = a0 * exp1
+            b = a0 * (k1 / (k2 - k1)) * (exp1 - exp2) + b0 * exp2
+
+            frac = (k1 * exp2 - k2 * exp1) / (k2 - k1)
+            c = a0 * (1.0 + frac) + b0 * (1 - exp2) + c0
+
+            #       Time,   [A],   [B],   [C]
+            print(f'{t:.6f},{a:.6f},{b:.6f},{c:.6f}', file=data_file)
+
+    return None
+
+
 if __name__ == '__main__':
 
     generate_1st_order_data()
     generate_reversible_1st_order_data()
-    generate_two_first_1st_order_reaction_data()
+    generate_two_1st_order_data()
+    generate_consecutive_data()

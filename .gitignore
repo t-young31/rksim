@@ -4,3 +4,5 @@ dist/
 rksim.egg-info/
 rksim/__pycache__
 tests/__pycache__/
+
+htmlcov/

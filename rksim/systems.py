@@ -241,6 +241,10 @@ class System:
 
         return None
 
+    def fit(self, data, optimise=True):
+        """Fit some data to this system. i.e. optimise ks"""
+        return data.fit(self, optimise=optimise)
+
     def plot(self, name='system', dpi=400):
         """Plot both the simulated and experimental data for this system"""
         return plot(self.species(), name=name, dpi=dpi)

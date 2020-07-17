@@ -92,3 +92,26 @@ def test_simple_alt():
     # Data generated with: k1 = 0.4, k2 = 0.8
     assert np.abs(system.rate_constant('A', 'B') - 0.4) < 1E-2
     assert np.abs(system.rate_constant('A', 'C') - 0.8) < 1E-2
+
+
+def test_simple_consecutive():
+    # A -> B -> C
+
+    system = System(Irreversible(Reactant('A'), Product('B')),
+                    Irreversible(Reactant('B'), Product('C')))
+    system.set_rate_constants(k=1.0)
+
+    data_path = os.path.join(here, 'simple_data',
+                             'consecutive_first_order.csv')
+    data = Data()
+    data += extract_data(filename=data_path, names=['A', 'B', 'C'])
+
+    data.fit(system, optimise=True)
+    # system.plot(name='simple_consecutive')
+
+    # Should be able to fit these data
+    assert system.mse() < 1E-2
+
+    # Data generated with k1 = 0.5  and k2 = 0.8 s^-1
+    assert np.abs(system.rate_constant('A', 'B') - 0.5) < 1E-3
+    assert np.abs(system.rate_constant('B', 'C') - 0.8) < 1E-3

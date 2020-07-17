@@ -1,3 +1,13 @@
+"""
+Integrated rate equations from
+https://onlinelibrary.wiley.com/doi/pdf/10.1002/9781118468586.epoc1012
+which references
+
+R. Livingstone, Evaluation and Interpretation of Rate Data, inInvestigation of
+Rates and Mechanisms of Reactions(S. L. Friess, E. S. Lewis, and A.Weissberger,
+Eds.), 2nd ed., Part I, Interscience, New York, 1961, p. 114
+"""
+
 import numpy as np
 
 

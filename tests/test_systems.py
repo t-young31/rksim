@@ -83,6 +83,25 @@ def test_setting_k():
         assert system.network.edges[edge]['k'] == 10
 
 
+def test_fit():
+    system = System(Irreversible(Reactant('R'), Product('P')))
+    system.set_rate_constants(k=1.2)
+
+    data_path = os.path.join(here, 'simple_data', 'first_order.csv')
+
+    data = Data()
+    data += extract_data(data_path, names=['P', 'R'])
+
+    # Can do system.fit(data) or data.fit(system)
+    system.fit(data)
+
+    # Should be able to fit these data
+    assert np.abs(system.mse()) < 1E-2
+
+    # Data generated with k=1.0 s^-1
+    assert np.abs(system.rate_constant('R', 'P') - 1.0) < 1E-2
+
+
 def test_derivative1():
     # R -> P
     system = System(Irreversible(Reactant(name='R'),
