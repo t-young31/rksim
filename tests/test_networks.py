@@ -108,3 +108,14 @@ def test_reversible_rate_constants():
                     Irreversible(Reactant('E'), Product('F')))
 
     assert len(system.rate_constants()) == 4
+
+
+def test_edge_mapping_loop():
+    # E + S <--> ES -> P + E
+    # Classic Michaelis-Menten kinetics
+
+    system = System(Reversible(Reactant('S'), Reactant('E'), Product('ES')),
+                    Irreversible(Reactant('ES'), Product('E'), Product('P')))
+
+    # Should be 3 distinct rate constants for this system
+    assert len(system.rate_constants()) == 3

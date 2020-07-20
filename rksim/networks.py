@@ -35,11 +35,17 @@ class Network(nx.DiGraph):
         """
         is_reversible = reaction.is_reversible()
 
+        edges_same_kf = []
+        edges_same_kb = []
+
         for reactant in reaction.reactants():
             for product in reaction.products():
 
                 r_idx = self.node_mapping[reactant.name]
                 p_idx = self.node_mapping[product.name]
+
+                # Add a tuple of the node indexes as an edge with kf
+                edges_same_kf.append((r_idx, p_idx))
 
                 # Change in stoichiometry e.g. 2R -> P would have (2, 1)
                 sto = (reactant.stoichiometry, product.stoichiometry)
@@ -51,81 +57,20 @@ class Network(nx.DiGraph):
                 if is_reversible:
                     self.add_edge(p_idx, r_idx, k=default_k, add=False,
                                   sto=tuple(reversed(sto)))
-        return None
+                    edges_same_kb.append((p_idx, r_idx))
 
-    def set_edge_mapping(self):
-        """
-        Set the mapping between unique edges and all edges. For example,
-        for a A + B -> P reaction with a reaction network
+        # Add the edges from this reaction to the edge mapping
+        edge_index = len(self.edge_mapping)
+        self.edge_mapping[edge_index] = edges_same_kf
 
-              0
-            A --\
-        1  +|     P
-            B - /
-              2
-
-        then the edges A-P and B-P need to have identical rate constants (k).
-        This function will generate a dictionary keyed with one edge (e.g. A-P)
-        and valued with all the equivalent edges. For the above this would be
-        {0: [(A, P), (B, P)]} where 0 is the index of the A-P edge and (A, P)
-        are actually the node numbers in the graph
-        """
-        self.edge_mapping = {}
-        added_edges = []
-
-        for n, edge in enumerate(self.edges):
-            i, j = edge
-
-            # Only consider reaction edges
-            if self.edges[edge]['add'] is True:
-                continue
-
-            # Don't add this edge if it's already in the mapping
-            if edge in added_edges:
-                continue
-
-            # At least this edge has the same rate constant
-            edges_same_k = [edge]
-
-            # Iterate through the neighbours to node i, above if i = A then
-            # B is a neighbour
-            for neighbour in self.neighbours_a(i):
-
-                # If the neighbour has a reaction edge to the same end point
-                # (which cannot be an add edge) then the rate constants need
-                # to be the same for this current edge and (neighbour, j)
-                if (neighbour, j) in self.edges:
-                    edges_same_k.append((neighbour, j))
-
-            # Add reaction edges that are neighbours to both i and j e.g.
-            # A + B -> C + D where i = A and j = C then this adds an edge
-            # to edges_same_k between B and D
-            for neighbour_i in self.neighbours_a(i):
-                for neighbour_j in self.neighbours_a(j):
-                    n_edge = (neighbour_i, neighbour_j)
-
-                    # If this reaction edge exists
-                    if n_edge in self.edges and not self.edges[n_edge]['add']:
-                        edges_same_k.append(n_edge)
-
-            # Likewise with neighbours to j if i = R for a reaction R -> C + D
-            # here i = R and j = C then an edges_same_k will be added between
-            # R and D
-            for neighbour in self.neighbours_a(j):
-                if (i, neighbour) in self.edges:
-                    edges_same_k.append((i, neighbour))
-
-            # Set the mapping dictionary
-            self.edge_mapping[n] = edges_same_k
-            # and update which edges have been added so far
-            added_edges += edges_same_k
+        # and likewise if it is reversible
+        if is_reversible:
+            self.edge_mapping[edge_index+1] = edges_same_kb
 
         return None
 
     def set_node_mapping(self):
         """Set the mapping from node names to indexes"""
-        self.node_mapping = {}
-
         for i in self.nodes:
             name = self.nodes[i]['name']
             self.node_mapping[name] = i
@@ -169,8 +114,8 @@ class Network(nx.DiGraph):
          self.add_node() or self.add_edge() will break the mappings"""
         super().__init__()
 
-        self.node_mapping = None
-        self.edge_mapping = None
+        self.node_mapping = {}              # Mapping from names -> indexes
+        self.edge_mapping = {}              # Mapping from unique -> all edges
 
 
 def make_network(reactions):
@@ -207,9 +152,6 @@ def make_network(reactions):
 
         # Add reaction arrow(s) with associated rate constant (k) values
         network.add_reaction_edges(reaction)
-
-    # Set the mapping for unique rate constants onto edges
-    network.set_edge_mapping()
 
     return network
 
