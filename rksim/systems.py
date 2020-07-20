@@ -63,14 +63,21 @@ class System:
         """
         # Number of unique edges
         n_edges = len(self.network.edge_mapping)
-
         ks = ks if ks is not None else n_edges * [k]
-        assert len(ks) == n_edges
+
+        if len(ks) != n_edges:
+            raise CannotSetAttribute('Number of rate constants not equal to'
+                                     'the number of edges that will be set')
+
+        # Zero all the rate constants
+        for (i, j) in self.network.edges:
+            self.network[i][j]['k'] = 0
 
         # Set all the equivalent edges with the specified rate constants
+        # add them as they may appear more than once
         for n, edges in enumerate(self.network.edge_mapping.values()):
             for (i, j) in edges:
-                self.network[i][j]['k'] = ks[n]
+                self.network[i][j]['k'] += ks[n]
 
         return None
 

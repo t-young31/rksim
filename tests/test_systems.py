@@ -10,6 +10,10 @@ import os
 here = os.path.abspath(os.path.dirname(__file__))
 
 
+def is_close(a, b):
+    return np.abs(a - b) < 1E-8
+
+
 def test_simple_system():
 
     system = System(Irreversible(Reactant(name='R'),
@@ -116,10 +120,10 @@ def test_derivative1():
     dpdt, drdt = system.derivative(concs)
 
     expected_dpdt = 1.0
-    assert np.abs(dpdt - expected_dpdt) < 1E-8
+    assert is_close(dpdt, expected_dpdt)
 
     expected_drdt = -1.0
-    assert np.abs(drdt - expected_drdt) < 1E-8
+    assert is_close(drdt, expected_drdt)
 
 
 def test_derivative2():
@@ -138,9 +142,9 @@ def test_derivative2():
 
         dadt, dbdt, dcdt = system.derivative([c_a, c_b, c_c])
 
-        assert np.abs(dadt - (-k * c_a * c_b)) < 1E-8
-        assert np.abs(dbdt - (-k * c_a * c_b)) < 1E-8
-        assert np.abs(dcdt - (+k * c_a * c_b)) < 1E-8
+        assert is_close(dadt, (-k * c_a * c_b))
+        assert is_close(dbdt, (-k * c_a * c_b))
+        assert is_close(dcdt, (+k * c_a * c_b))
 
 
 def test_derivative3():
@@ -153,9 +157,9 @@ def test_derivative3():
 
     dadt, dbdt, dcdt = system.derivative([c_a, c_b, c_c])
 
-    assert np.abs(dadt - (-k * c_a)) < 1E-8
-    assert np.abs(dbdt - (+k * c_a)) < 1E-8
-    assert np.abs(dcdt - (+k * c_a)) < 1E-8
+    assert is_close(dadt, (-k * c_a))
+    assert is_close(dbdt, (+k * c_a))
+    assert is_close(dcdt, (+k * c_a))
 
 
 def test_derivative4():
@@ -176,8 +180,8 @@ def test_derivative4():
 
         dpdt, drdt = system.derivative([c_p, c_r])
 
-        assert np.abs(dpdt - (kf * c_r - kb * c_p)) < 1E-8
-        assert np.abs(drdt - (-kf * c_r + kb * c_p)) < 1E-8
+        assert is_close(dpdt, (kf * c_r - kb * c_p))
+        assert is_close(drdt, (-kf * c_r + kb * c_p))
 
 
 def test_derivative5():
@@ -191,10 +195,10 @@ def test_derivative5():
 
     dadt, dbdt, dcdt, dddt = system.derivative([c_a, c_b, c_c, c_d])
 
-    assert np.abs(dadt - (-k * c_a * c_b + k * c_c * c_d)) < 1E-8
-    assert np.abs(dbdt - (-k * c_a * c_b + k * c_c * c_d)) < 1E-8
-    assert np.abs(dcdt - (+k * c_a * c_b - k * c_c * c_d)) < 1E-8
-    assert np.abs(dddt - (+k * c_a * c_b - k * c_c * c_d)) < 1E-8
+    assert is_close(dadt, (-k * c_a * c_b + k * c_c * c_d))
+    assert is_close(dbdt, (-k * c_a * c_b + k * c_c * c_d))
+    assert is_close(dcdt, (+k * c_a * c_b - k * c_c * c_d))
+    assert is_close(dddt, (+k * c_a * c_b - k * c_c * c_d))
 
 
 def test_derivative6():
@@ -214,10 +218,10 @@ def test_derivative6():
 
     dadt, dcdt, dbdt, dddt = system.derivative([c_a, c_c, c_b, c_d])
 
-    assert np.abs(dadt - (-k * c_a)) < 1E-8
-    assert np.abs(dbdt - (-k * c_b)) < 1E-8
-    assert np.abs(dcdt - (k * c_a + k * c_b - k * c_c)) < 1E-8
-    assert np.abs(dddt - (k * c_c)) < 1E-8
+    assert is_close(dadt, (-k * c_a))
+    assert is_close(dbdt, (-k * c_b))
+    assert is_close(dcdt, (k * c_a + k * c_b - k * c_c))
+    assert is_close(dddt, (k * c_c))
 
 
 def test_derivative7():
@@ -236,8 +240,8 @@ def test_derivative7():
 
     dadt, dbdt = system.derivative([c_a, c_b])
 
-    assert np.abs(dadt - (-2 * k * c_a**2)) < 1E-8
-    assert np.abs(dbdt - (k * c_a**2)) < 1E-8
+    assert is_close(dadt, (-2 * k * c_a**2))
+    assert is_close(dbdt, (k * c_a**2))
 
 
 def test_derivative8():
@@ -251,8 +255,8 @@ def test_derivative8():
 
     dadt, dbdt = system.derivative([c_a, c_b])
 
-    assert np.abs(dadt - (-k * c_a)) < 1E-8
-    assert np.abs(dbdt - (+2.0 * k * c_a)) < 1E-8
+    assert is_close(dadt, (-k * c_a))
+    assert is_close(dbdt, (+2.0 * k * c_a))
 
 
 def test_derivative9():
@@ -271,7 +275,34 @@ def test_derivative9():
     dadt, dbdt, dcdt = system.derivative([c_a, c_b, c_c])
 
     # expecting: d[A]/dt = -2k1[A]^2 - k2[A]
-    assert np.abs(dadt - (-2 * k1 * c_a**2 - k2 * c_a)) < 1E-8
+    assert is_close(dadt, (-2 * k1 * c_a**2 - k2 * c_a))
+
+
+def test_derivative10():
+    # E + S <--> ES -> E + P
+
+    system = System(Reversible(Reactant('E'), Reactant('S'), Product('ES')),
+                    Irreversible(Reactant('ES'), Product('E'), Product('P')))
+
+    kf, kb, kr = 1.0, 0.03, 2.0
+    system.set_rate_constants([kf, kb, kr])
+
+    c_e, c_s, c_es, c_p = 0.1, 1.0, 0.001, 0.02
+
+    # {'E': 0, 'ES': 1, 'S': 2, 'P': 3}
+    dcdt = system.derivative([c_e, c_es, c_s, c_p])
+
+    # d[E]/dt = -kf [E][S] + kb [ES] + kr[ES]
+    assert is_close(dcdt[0], -kf * c_e * c_s + kb * c_es + kr * c_es)
+
+    # d[ES]/dt = kf [E][S] - kb [ES] - kr[ES]
+    assert is_close(dcdt[1], kf * c_e * c_s - kb * c_es - kr * c_es)
+
+    # d[S]/dt = -kf [E][S] + kb [ES]
+    assert is_close(dcdt[2], -kf * c_e * c_s + kb * c_es)
+
+    # d[P]/dt = kr [ES}
+    assert is_close(dcdt[3], kr * c_es)
 
 
 def test_set_init_conc():
