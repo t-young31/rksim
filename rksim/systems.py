@@ -191,7 +191,7 @@ class System:
                         continue
 
                     sto = self.network.edges[(k, j)]['sto'][0]
-                    conc *= sto * concentrations[k]**sto
+                    conc *= concentrations[k]**sto
 
                 # Number of nodes that this outflow is distributed over
                 m = 1
@@ -222,8 +222,8 @@ class System:
                         continue
 
                     m += 1
-                    sto_k, sto_i = self.network.edges[(k, i)]['sto']
-                    conc *= sto_i * concentrations[k]**sto_k
+                    sto_k, _ = self.network.edges[(k, i)]['sto']
+                    conc *= concentrations[k]**sto_k
 
                 inflows += conc * self.network[j][i]['k'] / m
 

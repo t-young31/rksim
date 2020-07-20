@@ -255,6 +255,25 @@ def test_derivative8():
     assert np.abs(dbdt - (+2.0 * k * c_a)) < 1E-8
 
 
+def test_derivative9():
+    # 2A -> B, A -> C
+
+    reaction1 = Irreversible(Reactant('A'), Reactant('A'), Product('B'))
+    reaction2 = Irreversible(Reactant('A'), Product('C'))
+
+    system = System(reaction1, reaction2)
+
+    k1, k2 = 0.3, 0.5
+    system.set_rate_constants([k1, k2])
+
+    c_a, c_b, c_c = 0.7, 0.0, 0.0
+
+    dadt, dbdt, dcdt = system.derivative([c_a, c_b, c_c])
+
+    # expecting: d[A]/dt = -2k1[A]^2 - k2[A]
+    assert np.abs(dadt - (-2 * k1 * c_a**2 - k2 * c_a)) < 1E-8
+
+
 def test_set_init_conc():
     # R -> P
     system = System(Irreversible(Reactant('R'), Product('P')))
