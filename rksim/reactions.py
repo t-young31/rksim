@@ -77,7 +77,8 @@ class Reaction:
             if species.name == name:
                 return species.stoichiometry
 
-        raise ex.CannotGetAttribute
+        # If this
+        return 0
 
     def __init__(self, *args):
         """Reaction e.g. R -> P"""

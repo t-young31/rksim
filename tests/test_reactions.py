@@ -53,9 +53,8 @@ def test_pruning():
     assert len(reaction.components) == 2
     assert reaction.sto('A') == 2
 
-    # Cannot get the stoichiometry of an unknown component
-    with pytest.raises(ex.CannotGetAttribute):
-        _ = reaction.sto('X')
+    # Stoichiometry of an unknown component is 0
+    assert reaction.sto('X') == 0
 
 
 def test_reaction_set():

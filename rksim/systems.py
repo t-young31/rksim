@@ -124,6 +124,27 @@ class System:
                                                       concentrations=concs)
         return None
 
+    def set_stos(self):
+        """Set an array of stoichiometries"""
+        n = len(self.reactions)
+        m = self.network.number_of_nodes()
+
+        # Matrix of stoichiometries (sto). Reactions as rows and unique
+        # species as columns
+        self.stos = np.zeros(shape=(n, m, 2))
+
+        for i, reaction in enumerate(self.reactions):
+            reactant_names = [r.name for r in reaction.reactants()]
+
+            for species_name, j in self.network.node_mapping.items():
+
+                # Final idx is 0 if this species is a Reactant or 1 if Product
+                k = 0 if species_name in reactant_names else 1
+
+                self.stos[i, j, k] = reaction.sto(species_name)
+
+        return None
+
     def derivative(self, concentrations, time=0.0):
         """
         Calculate the derivative of all the concentrations with respect to time
@@ -140,54 +161,48 @@ class System:
         dcdt = np.zeros(n)
 
         for i in range(n):
-            name = self.network.nodes[i]['name']
             inflow, outflow = 0.0, 0.0
 
-            for reaction in self.reactions:
-                reactants = list(reaction.reactants())
+            for j, reaction in enumerate(self.reactions):
 
                 # If this component is outflowing
-                if name in [r.name for r in reactants]:
-                    sto = reaction.sto(name)
+                if self.stos[j, i, 0] != 0:
+                    sto = self.stos[j, i, 0]
                     conc = sto * concentrations[i] ** sto
 
-                    for other in reactants:
+                    for k in range(n):
 
-                        # Don't re-multiply by this conc
-                        if other.name == name:
+                        # Don't re-multiply by this conc and only multiply if
+                        # the stoichometry of a reactant is > 0
+                        if k == i or self.stos[j, k, 0] == 0:
                             continue
 
-                        # e.g. if i == A in A + 2B -> C then here the product
-                        # of concs is multiplied by [B]^2
-                        sto = reaction.sto(other.name)
-                        other_idx = self.network.node_mapping[other.name]
-
-                        conc *= concentrations[other_idx] ** sto
+                        conc *= concentrations[k] ** self.stos[j, k, 0]
 
                     # Add e.g. k[A][B]^2 to the outflow for this reaction
                     outflow += reaction.k * conc
 
-                products = list(reaction.products())
                 # If this component is inflow
-                if name in [p.name for p in products]:
+                if self.stos[j, i, 1] != 0:
 
-                    sto = reaction.sto(name)
                     # Product concentration is just the stoichiometry e.g. for
                     # i == C in A -> 2C then sto = 2
-                    conc = sto
+                    conc = self.stos[j, i, 1]
 
                     # For all the reactants in this reaction multiply by
                     # their concentration raised to the power of their
                     # stoichiometry
-                    for other in reactants:
-                        sto = reaction.sto(other.name)
-                        other_idx = self.network.node_mapping[other.name]
+                    for k in range(n):
 
-                        conc *= concentrations[other_idx] ** sto
+                        # Reactants flowing to i
+                        if self.stos[j, k, 0] == 0:
+                            continue
+
+                        conc *= concentrations[k] ** self.stos[j, k, 0]
 
                     inflow += reaction.k * conc
 
-            # Set the
+            # Set the derivative dC_i/dt
             dcdt[i] = inflow - outflow
 
         return dcdt
@@ -217,3 +232,6 @@ class System:
 
         self.network = nws.Network(*args)
         self.reactions = ReactionSet(*args)
+
+        self.stos = None
+        self.set_stos()
