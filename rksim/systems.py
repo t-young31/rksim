@@ -1,6 +1,7 @@
 import numpy as np
 from rksim.data import TimeSeries
 import rksim.networks as nws
+from rksim.reactions import ReactionSet
 from rksim.plotting import plot
 from rksim.exceptions import CannotSetAttribute
 from rksim.exceptions import CannotGetAttribute
@@ -11,7 +12,7 @@ class System:
     def __str__(self):
         return f'{[species.name for species in self.species()]}'
 
-    def mse(self):
+    def mse(self, relative=False):
         """
         Calculate the mean squared error between the
         true concentrations and the simulated concentrations
@@ -37,21 +38,34 @@ class System:
                 diff = (species.series.concentrations[i] -
                         species.simulated_series.concentrations[idx])
 
-                # Compute the square of the difference to make it smooth
-                mse += diff**2
+                # Compute the square of the difference to make the function
+                # more smooth. Compute the relative error for a more
+                # reasonable fit to low and high concentration data
+                if relative and species.series.concentrations[i] > 0:
+                    mse += diff ** 2 / species.series.concentrations[i]
+
+                else:
+                    mse += diff ** 2
 
         return mse
 
     def rate_constants(self):
         """Get a numpy array of rate constants"""
-        ks = []
+        return np.array([reaction.k for reaction in self.reactions])
 
-        for edges in self.network.edge_mapping.values():
-            # All the edges in this set have the same k, so use the first
-            i, j = next(iter(edges))
-            ks.append(self.network[i][j]['k'])
+    def rate_constant(self, *args):
+        """Get a rate constant for a reaction.
 
-        return np.array(ks)
+        system.rate_constant('R', 'P') :-> k_RP if the reaction R -> P is in
+        the system
+
+        :param args: (str) >1 Name of a species in this system
+        """
+        return self.reactions.rate_constant(species_names=args)
+
+    def set_rate_constant(self, *args, k=1.0):
+        """Set a rate constant for a reaction"""
+        return self.reactions.set_rate_constant(species_names=args, k=k)
 
     def set_rate_constants(self, ks=None, k=None):
         """Set rate constants
@@ -61,25 +75,7 @@ class System:
 
         :param k: (float) Rate constant to set all ks as
         """
-        # Number of unique edges
-        n_edges = len(self.network.edge_mapping)
-        ks = ks if ks is not None else n_edges * [k]
-
-        if len(ks) != n_edges:
-            raise CannotSetAttribute('Number of rate constants not equal to'
-                                     'the number of edges that will be set')
-
-        # Zero all the rate constants
-        for (i, j) in self.network.edges:
-            self.network[i][j]['k'] = 0
-
-        # Set all the equivalent edges with the specified rate constants
-        # add them as they may appear more than once
-        for n, edges in enumerate(self.network.edge_mapping.values()):
-            for (i, j) in edges:
-                self.network[i][j]['k'] += ks[n]
-
-        return None
+        return self.reactions.set_rate_constants(ks=ks, k=k)
 
     def set_initial_concentration(self, name, c):
         """
@@ -99,37 +95,6 @@ class System:
         self.network.nodes[node_index]['c0'] = float(c)
         return None
 
-    def rate_constant(self, name_i, name_j):
-        """
-        Set the rate constant (k) between a species i and j in the
-        reaction network is directional so i -> j rate constant
-
-        :param name_i: (str) Name of a species
-        :param name_j: (str) Name of a species
-        """
-        try:
-            edge = self.network.get_edge(name_i, name_j)
-            return edge['k']
-
-        except KeyError:
-            raise CannotGetAttribute('Reaction not found in the network')
-
-    def set_rate_constant(self, name_i, name_j, k):
-        """
-        Set the rate constant (k) between a species i and j in the
-        reaction network is directional so i -> j rate constant
-
-        :param name_i: (str) Name of a species
-        :param name_j: (str) Name of a species
-        :param k: (float) Rate constant
-        """
-        try:
-            edge = self.network.get_edge(name_i, name_j)
-            edge['k'] = k
-
-        except KeyError:
-            raise CannotSetAttribute('Reaction not found in the network')
-
     def set_simulated(self, concentrations, times):
         """
         Set concentrations as a function of time for all species in this
@@ -146,9 +111,17 @@ class System:
             # Concentrations are a matrix of time points as the rows and
             # columns as the different species
             concs = concentrations[:, i]
-            species.simulated_series = TimeSeries(name=species.name,
-                                                  times=times,
-                                                  concentrations=concs)
+
+            # If a time series is already set only update the concentrations
+            if (species.simulated_series is not None
+                    and len(concs) == len(species.simulated_series.times)):
+                species.simulated_series.concentrations = concs
+
+            # Otherwise set the time series
+            else:
+                species.simulated_series = TimeSeries(name=species.name,
+                                                      times=times,
+                                                      concentrations=concs)
         return None
 
     def derivative(self, concentrations, time=0.0):
@@ -162,81 +135,60 @@ class System:
                                dm^-3 shape = (n,) where n is the number of
                                components (species in this system). Must be >0
         """
+        # TODO optimise this function
         n = len(concentrations)
         dcdt = np.zeros(n)
 
         for i in range(n):
-            inflows = 0
-            outflows = 0
+            name = self.network.nodes[i]['name']
+            inflow, outflow = 0.0, 0.0
 
-            neighbours_i = list(self.network.neighbours_a(i))
+            for reaction in self.reactions:
+                reactants = list(reaction.reactants())
 
-            # Add the rate constant for all outflowing reactions
-            #          P1
-            #          ^
-            #          |
-            # i.e. A + B -> P2    then outflows for B is (k1 + k2)
-            # and j in [P1, P2]
-            for j in nws.outflow_node(self.network, i):
-                # Add the rate constant for this outflow reaction
-                # will be multiplied by [A][B] and divided by the number
-                # of neighbours + 1 i.e. the above n_neighbours = 0
+                # If this component is outflowing
+                if name in [r.name for r in reactants]:
+                    sto = reaction.sto(name)
+                    conc = sto * concentrations[i] ** sto
 
-                # Stoichiometry from i -> j
-                sto = self.network.edges[(i, j)]['sto'][0]
-                conc = sto * concentrations[i]**sto
+                    for other in reactants:
 
-                # Concentrations of components on addition edges to this
-                # node that has a reaction edge to j need to be multiplied
-                for k in neighbours_i:
+                        # Don't re-multiply by this conc
+                        if other.name == name:
+                            continue
 
-                    if (k, j) not in self.network.edges:
-                        continue
+                        # e.g. if i == A in A + 2B -> C then here the product
+                        # of concs is multiplied by [B]^2
+                        sto = reaction.sto(other.name)
+                        other_idx = self.network.node_mapping[other.name]
 
-                    # Only add reaction edges between neighbours to j and i
-                    if self.network.edges[(k, j)]['add'] is True:
-                        continue
+                        conc *= concentrations[other_idx] ** sto
 
-                    sto = self.network.edges[(k, j)]['sto'][0]
-                    conc *= concentrations[k]**sto
+                    # Add e.g. k[A][B]^2 to the outflow for this reaction
+                    outflow += reaction.k * conc
 
-                # Number of nodes that this outflow is distributed over
-                m = 1
-                for k in self.network.neighbours_a(j):
-                    if (i, k) in self.network.edges:
-                        m += 1
+                products = list(reaction.products())
+                # If this component is inflow
+                if name in [p.name for p in products]:
 
-                # Add the outflow as k[A]^o[B]^p
-                outflows += self.network[i][j]['k'] * conc / m
+                    sto = reaction.sto(name)
+                    # Product concentration is just the stoichiometry e.g. for
+                    # i == C in A -> 2C then sto = 2
+                    conc = sto
 
-            # Add the rate constant for all inflowing reactions to this
-            # node for example:  A + B -> P then inflow nodes are A and B
-            for j in nws.inflow_node(self.network, i):
+                    # For all the reactants in this reaction multiply by
+                    # their concentration raised to the power of their
+                    # stoichiometry
+                    for other in reactants:
+                        sto = reaction.sto(other.name)
+                        other_idx = self.network.node_mapping[other.name]
 
-                # Stoichiometry from j -> i as the second element in the tuple
-                sto_j, sto_i = self.network.edges[(j, i)]['sto']
-                conc = sto_i * concentrations[j]**sto_j
+                        conc *= concentrations[other_idx] ** sto
 
-                # Number of nodes that this inflow comes from
-                m = 1
-                for k in self.network.neighbours_a(j):
+                    inflow += reaction.k * conc
 
-                    if (k, i) not in self.network.edges:
-                        continue
-
-                    # Only add reaction edges between neighbours to k and i
-                    if self.network.edges[(k, i)]['add'] is True:
-                        continue
-
-                    m += 1
-                    sto_k, _ = self.network.edges[(k, i)]['sto']
-                    conc *= concentrations[k]**sto_k
-
-                inflows += conc * self.network[j][i]['k'] / m
-
-            # Derivative is the inflow minus the outflow e.g.
-            # R -> P  d[R]/dt = -k[R], d[P]/dt = k[R]
-            dcdt[i] = inflows - outflows
+            # Set the
+            dcdt[i] = inflow - outflow
 
         return dcdt
 
@@ -263,4 +215,5 @@ class System:
         :param args: (rksim.system.Reaction)
         """
 
-        self.network = nws.make_network(args)
+        self.network = nws.Network(*args)
+        self.reactions = ReactionSet(*args)

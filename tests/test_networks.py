@@ -11,9 +11,8 @@ def test_reaction_network():
 
     assert system.network is not None
 
-    # System only has two species and one edge (reaction) between them
+    # System only has two species
     assert system.network.number_of_nodes() == 2
-    assert system.network.number_of_edges() == 1
 
 
 def test_plotting_network():
@@ -36,29 +35,6 @@ def test_reaction_network_addition():
     # System should have 3 nodes
     assert system.network.number_of_nodes() == 3
 
-    # and 4 edges, one of which is not a reaction but a addition edge
-    assert system.network.number_of_edges() == 4
-    assert len([edge for edge in system.network.edges
-                if system.network.edges[edge]['add'] is True])
-
-
-def test_edge_mapping():
-    # A + B -> P
-    reaction = Irreversible(Reactant('A'), Reactant('B'), Product('P'))
-    system = System(reaction)
-
-    node_a = system.network.node_mapping['A']
-    node_b = system.network.node_mapping['B']
-    node_p = system.network.node_mapping['P']
-
-    key = next(iter(system.network.edge_mapping.keys()))
-
-    assert (node_a, node_p) in system.network.edge_mapping[key]     # A-P
-    assert (node_b, node_p) in system.network.edge_mapping[key]     # B-P
-
-    assert (node_a, node_b) not in system.network.edge_mapping[key]  # A-B
-    assert (node_p, node_p) not in system.network.edge_mapping[key]  # P-P
-
 
 def test_rate_constants():
     # A + B -> P
@@ -66,10 +42,6 @@ def test_rate_constants():
     system = System(reaction)
 
     system.set_rate_constants(ks=[0.5])
-
-    for (i, j) in system.network.edges:
-        if system.network[i][j]['add'] is False:
-            assert system.network[i][j]['k'] == 0.5
 
     ks = system.rate_constants()
     assert all(k == 0.5 for k in ks)
@@ -79,9 +51,6 @@ def test_rate_constants():
                             Product('C'), Product('D'))
     system = System(reaction)
     print(system)
-
-    print(system.network.edge_mapping)
-    assert len(system.rate_constants()) == 1
 
 
 def test_reversible_rate_constants():
@@ -110,7 +79,7 @@ def test_reversible_rate_constants():
     assert len(system.rate_constants()) == 4
 
 
-def test_edge_mapping_loop():
+def test_loop():
     # E + S <--> ES -> P + E
     # Classic Michaelis-Menten kinetics
 

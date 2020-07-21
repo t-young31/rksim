@@ -14,10 +14,6 @@ def test_simple():
     system = System(reaction)
 
     r_index = system.network.node_mapping['R']
-    p_index = system.network.node_mapping['P']
-
-    # Change in stoichiometry is 2 -> 1 along this reaction edge
-    assert system.network.edges[(r_index, p_index)]['sto'] == (2, 1)
 
     data_path = os.path.join(here, 'higher_order_data', 'second_order.csv')
     data = Data()
@@ -53,8 +49,7 @@ def test_ab_reaction():
     assert np.abs(system.mse()) < 1E-2
 
     # Data generated with k = 1.7 s^-2 mol^-1 dm^3
-    assert np.abs(system.rate_constant('A', 'P') - 1.7) < 1E-2
-    assert np.abs(system.rate_constant('B', 'P') - 1.7) < 1E-2
+    assert np.abs(system.rate_constant('A', 'B',  'P') - 1.7) < 1E-2
 
     ks = system.rate_constants()
     assert len(ks) == 1

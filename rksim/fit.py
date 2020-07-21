@@ -19,7 +19,7 @@ def fit(data, system, optimise):
     init_concs = [system.network.nodes[i]['c0'] for i in system.network.nodes]
 
     # Array of times along which the ODE will be solved
-    times = np.linspace(0.0, data.max_time(), num=1000)
+    times = np.linspace(0.0, data.max_time(), num=10000)
 
     if optimise:
         optimise_rate_constants(system, times, init_concs)
@@ -48,19 +48,21 @@ def optimise_rate_constants(system, times, init_concs):
     init_ks = system.rate_constants()
 
     # Minimise the error and set the optimise rate constants
-    result = minimize(mse, x0=init_ks, args=(system, times, init_concs))
-    system.set_rate_constants(result.x)
+    result = minimize(mse, x0=init_ks,
+                      method='BFGS',
+                      args=(system, times, init_concs))
 
+    system.set_rate_constants(np.abs(result.x))
     return None
 
 
 def mse(rate_constants, system, times, init_concs):
-    """Calculate the mean squared error for a system with a set of ks"""
+    """Calculate the rel mean squared error for a system with a set of ks"""
 
-    system.set_rate_constants(rate_constants)
+    system.set_rate_constants(np.abs(rate_constants))
 
     # Integrate the time forward and set the time series
     concs = odeint(system.derivative, init_concs, times)
     system.set_simulated(concs, times)
 
-    return system.mse()
+    return system.mse(relative=True)
