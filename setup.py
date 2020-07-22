@@ -2,7 +2,7 @@ from setuptools import setup
 
 setup(name='rksim',
       version='1.0.0a0',
-      description='Reaction Kinetic Simulator and Fitting',
+      description='Reaction Kinetic Simulation and Fitting',
       packages=['rksim'],
       url='https://github.com/t-young31/rksim',
       license='MIT',

@@ -1,0 +1,15 @@
+\documentclass[10pt]{article}
+\usepackage{bm}% bold math
+\usepackage{amsmath}
+
+\begin{document}
+For a system of components $\{C\}$ with concentrations $\boldsymbol{c} = (c_0, c_1, \cdots c_n)$ joined by a set of reactions $\{R\}$ the time derivative for a single component is
+\\
+\begin{equation}
+\frac{dc_i}{dt} = \sum_{j \in \{R\}} g(i, j)\, S_{j, i}\, \mathrm{k}_j  \prod_{k \in \{C\}} c_k^{S_{j, k}}
+\end{equation}
+\\
+where $j$ enumerates over reactions, $g(i, j)$ is a function that returns 1 if $i$ is a product in reaction $j$ and -1 if it's a reactant, $S$ is a matrix of stoichiometries, $\mathrm{k}_j$ is the rate constant for reaction $j$, $k$ enumerates over components in the system and $c_k$ is the concentration of component $k$.
+
+\end{document}
+

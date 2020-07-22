@@ -145,6 +145,55 @@ class System:
 
         return None
 
+    def _component_derivative(self, i, concentrations):
+        """Calculate the derivative with respect to a component i in the
+        system.
+                                      __
+        dc_i/dt = (   Σ   S_{j,i} k_j  || c_k ^S_{j, k}  -
+                  ( j ∈ P              k
+                                      __
+                     Σ   S_{j,i} k_j  || c_k ^S_{j, k} )
+                    j ∈ R              k               )
+
+        where P is the set of reactions where i is a product and R is the
+        set of reactions where i is a reactant
+        """
+        n = len(concentrations)
+        inflow, outflow = 0.0, 0.0
+
+        for j, reaction in enumerate(self.reactions):
+
+            # If this component is outflowing
+            if self.stos[j, i, 0] != 0:
+                conc = self.stos[j, i, 0]
+
+                for k in range(n):
+
+                    # If the reactant is not present then the stoichometry
+                    # is 0 and conc will be multipled by 1
+                    conc *= concentrations[k] ** self.stos[j, k, 0]
+
+                # Add e.g. k[A][B]^2 to the outflow for this reaction
+                outflow += reaction.k * conc
+
+            # If this component is inflow
+            if self.stos[j, i, 1] != 0:
+
+                # Product concentration is just the stoichiometry e.g. for
+                # i == C in A -> 2C then sto = 2
+                conc = self.stos[j, i, 1]
+
+                # For all the reactants in this reaction multiply by
+                # their concentration raised to the power of their
+                # stoichiometry
+                for k in range(n):
+
+                    conc *= concentrations[k] ** self.stos[j, k, 0]
+
+                inflow += reaction.k * conc
+
+        return inflow - outflow
+
     def derivative(self, concentrations, time=0.0):
         """
         Calculate the derivative of all the concentrations with respect to time
@@ -156,56 +205,9 @@ class System:
                                dm^-3 shape = (n,) where n is the number of
                                components (species in this system). Must be >0
         """
-        # TODO optimise this function
-        n = len(concentrations)
-        dcdt = np.zeros(n)
-
-        for i in range(n):
-            inflow, outflow = 0.0, 0.0
-
-            for j, reaction in enumerate(self.reactions):
-
-                # If this component is outflowing
-                if self.stos[j, i, 0] != 0:
-                    sto = self.stos[j, i, 0]
-                    conc = sto * concentrations[i] ** sto
-
-                    for k in range(n):
-
-                        # Don't re-multiply by this conc and only multiply if
-                        # the stoichometry of a reactant is > 0
-                        if k == i or self.stos[j, k, 0] == 0:
-                            continue
-
-                        conc *= concentrations[k] ** self.stos[j, k, 0]
-
-                    # Add e.g. k[A][B]^2 to the outflow for this reaction
-                    outflow += reaction.k * conc
-
-                # If this component is inflow
-                if self.stos[j, i, 1] != 0:
-
-                    # Product concentration is just the stoichiometry e.g. for
-                    # i == C in A -> 2C then sto = 2
-                    conc = self.stos[j, i, 1]
-
-                    # For all the reactants in this reaction multiply by
-                    # their concentration raised to the power of their
-                    # stoichiometry
-                    for k in range(n):
-
-                        # Reactants flowing to i
-                        if self.stos[j, k, 0] == 0:
-                            continue
-
-                        conc *= concentrations[k] ** self.stos[j, k, 0]
-
-                    inflow += reaction.k * conc
-
-            # Set the derivative dC_i/dt
-            dcdt[i] = inflow - outflow
-
-        return dcdt
+        n_components = len(concentrations)
+        return np.array([self._component_derivative(i, concentrations)
+                         for i in range(n_components)])
 
     def species(self):
         """Get the next species in this system from the reaction network"""

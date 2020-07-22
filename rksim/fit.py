@@ -32,7 +32,7 @@ def fit(data, system, optimise):
                           method='BFGS',
                           args=(system, times, init_concs))
 
-        # Rate constants are all positive
+        # Rate constants must all be positive (abs(k)) is minimised in mse()
         system.set_rate_constants(np.abs(result.x))
         return None
 
