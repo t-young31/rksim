@@ -67,16 +67,16 @@ def test_reaction_set():
     assert all(k == 1.0 for k in rxn_set.rate_constants())
 
     # Rate constants are initialised at 1
-    assert rxn_set.rate_constant(species_names=['R', 'P']) == 1.0
+    assert rxn_set.rate_constant('R', 'P') == 1.0
 
     rxn_set2 = ReactionSet(Reversible(Reactant('R'), Product('P')))
     # Reaction set should add the reverse reaction
     assert len(rxn_set2) == 2
 
-    rxn_set2.set_rate_constant(species_names=['R', 'P'], k=2.0)
-    assert rxn_set2.rate_constant(species_names=['R', 'P']) == 2.0
+    rxn_set2.set_rate_constant('R', 'P', k=2.0)
+    assert rxn_set2.rate_constant('R', 'P') == 2.0
     # Reverse reaction should still have k = 1.0
-    assert rxn_set2.rate_constant(species_names=['P', 'R']) == 1.0
+    assert rxn_set2.rate_constant('P', 'R') == 1.0
 
     # Cannot set a reaction set with a single reaction with two rate constants
     with pytest.raises(ex.CannotSetAttribute):
@@ -84,4 +84,4 @@ def test_reaction_set():
 
     # Cannot set the rate constant for a reaction that doesn't exist in the set
     with pytest.raises(ex.CannotSetAttribute):
-        rxn_set.set_rate_constant(species_names=['X', 'Y'], k=1.0)
+        rxn_set.set_rate_constant('X', 'Y', k=1.0)

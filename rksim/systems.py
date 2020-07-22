@@ -4,10 +4,9 @@ import rksim.networks as nws
 from rksim.reactions import ReactionSet
 from rksim.plotting import plot
 from rksim.exceptions import CannotSetAttribute
-from rksim.exceptions import CannotGetAttribute
 
 
-class System:
+class System(ReactionSet):
 
     def __str__(self):
         return f'{[species.name for species in self.species()]}'
@@ -48,34 +47,6 @@ class System:
                     mse += diff ** 2
 
         return mse
-
-    def rate_constants(self):
-        """Get a numpy array of rate constants"""
-        return np.array([reaction.k for reaction in self.reactions])
-
-    def rate_constant(self, *args):
-        """Get a rate constant for a reaction.
-
-        system.rate_constant('R', 'P') :-> k_RP if the reaction R -> P is in
-        the system
-
-        :param args: (str) >1 Name of a species in this system
-        """
-        return self.reactions.rate_constant(species_names=args)
-
-    def set_rate_constant(self, *args, k=1.0):
-        """Set a rate constant for a reaction"""
-        return self.reactions.set_rate_constant(species_names=args, k=k)
-
-    def set_rate_constants(self, ks=None, k=None):
-        """Set rate constants
-
-        :param ks: (np.ndarray) shape = (n,) where n is the number of unique
-                   rate constants in the reaction network
-
-        :param k: (float) Rate constant to set all ks as
-        """
-        return self.reactions.set_rate_constants(ks=ks, k=k)
 
     def set_initial_concentration(self, name, c):
         """
@@ -124,7 +95,7 @@ class System:
                                                       concentrations=concs)
         return None
 
-    def set_stos(self):
+    def set_stoichiometries(self):
         """Set an array of stoichiometries"""
         n = len(self.reactions)
         m = self.network.number_of_nodes()
@@ -145,7 +116,7 @@ class System:
 
         return None
 
-    def _component_derivative(self, i, concentrations):
+    def component_derivative(self, i, concentrations):
         """Calculate the derivative with respect to a component i in the
         system.
                                       __
@@ -187,7 +158,6 @@ class System:
                 # their concentration raised to the power of their
                 # stoichiometry
                 for k in range(n):
-
                     conc *= concentrations[k] ** self.stos[j, k, 0]
 
                 inflow += reaction.k * conc
@@ -206,7 +176,7 @@ class System:
                                components (species in this system). Must be >0
         """
         n_components = len(concentrations)
-        return np.array([self._component_derivative(i, concentrations)
+        return np.array([self.component_derivative(i, concentrations)
                          for i in range(n_components)])
 
     def species(self):
@@ -227,13 +197,16 @@ class System:
 
     def __init__(self, *args):
         """
-        System of reactions
+        System of reactions. Subclass of ReactionSet with a self.reactions
+        attribute
 
         :param args: (rksim.system.Reaction)
         """
+        super().__init__(*args)
 
+        # Network of unique components in the system
         self.network = nws.Network(*args)
-        self.reactions = ReactionSet(*args)
 
+        # Stoichiometry matrix (np.ndarray)
         self.stos = None
-        self.set_stos()
+        self.set_stoichiometries()

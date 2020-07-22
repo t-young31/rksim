@@ -1,5 +1,6 @@
 from rksim.species import Reactant, Product
 import rksim.exceptions as ex
+import numpy as np
 from copy import deepcopy
 
 
@@ -50,6 +51,7 @@ class Reaction:
         return None
 
     def ordered_names(self):
+        """Get a list """
         reactant_names = [r.name for r in self.reactants()]
         product_names = [p.name for p in self.products()]
         return reactant_names + product_names
@@ -72,12 +74,12 @@ class Reaction:
         return self._components(Product)
 
     def sto(self, name):
+        """Get the stoichiometry of a named component in this reaction"""
 
         for species in self.components:
             if species.name == name:
                 return species.stoichiometry
 
-        # If this
         return 0
 
     def __init__(self, *args):
@@ -97,33 +99,44 @@ class Reversible(Reaction):
 class ReactionSet:
 
     def __iter__(self):
-        return iter(self._list)
+        return iter(self.reactions)
 
     def __len__(self):
-        return len(self._list)
+        return len(self.reactions)
 
     def species(self):
+        """Yield a species in this reaction set. May have repeats"""
 
-        for reaction in self._list:
+        for reaction in self.reactions:
             for species in reaction.components:
                 yield species
 
         return StopIteration
 
-    def rate_constant(self, species_names):
-        """Get a named rate constant"""
+    def rate_constant(self, *args):
+        """
+        Get a named rate constant from the constituent species e.g. for a
+        reaction set containing A + B -> C get the rate constant with
+        rset.rate_constant(['A', 'B', 'C']). ['B', 'A', 'C'] *wont* work
 
-        for reaction in self._list:
-            if list(species_names) == list(reaction.ordered_names()):
+        :param species_names: (list(str))
+        """
+
+        for reaction in self.reactions:
+            if list(args) == reaction.ordered_names():
                 return reaction.k
 
         raise ex.CannotGetAttribute('Reaction not found')
 
-    def set_rate_constant(self, species_names, k=1.0):
-        """Get a named rate constant"""
+    def set_rate_constant(self, *args, k=1.0):
+        """Get a named rate constant
 
-        for reaction in self._list:
-            if list(species_names) == list(reaction.ordered_names()):
+        :param species_names: (list(str))
+        :param k: (float) Rate constant
+        """
+
+        for reaction in self.reactions:
+            if list(args) == reaction.ordered_names():
                 reaction.k = k
                 return
 
@@ -133,35 +146,32 @@ class ReactionSet:
         """Set the rate constants either with an ordered list of ks, or
         all the same rate constant
 
-        :param ks: (list(float)) or (np.ndarray) shape (len(self.reactions),)
+        :param ks: (np.ndarray) shape = (n,) where n is the number of unique
+                   rate constants in the reaction network
         :param k: (float)
         """
-        n = len(self._list)
+        n = len(self.reactions)
 
         ks = n * [k] if k is not None else ks
         if len(ks) != n:
             raise ex.CannotSetAttribute('Incorrect number of rate constants')
 
         # Set the rate constants for all reactions
-        for i, reaction in enumerate(self._list):
+        for i, reaction in enumerate(self.reactions):
             reaction.k = ks[i]
 
         return None
 
     def rate_constants(self):
-        """Get all the rate constants"""
-
-        for reaction in self._list:
-            yield reaction.k
-
-        return StopIteration
+        """YGet a numpy array of rate constants"""
+        return np.array([reaction.k for reaction in self.reactions])
 
     def add_reverse_reactions(self):
         """If there are reversible reactions swap for irreversible
         and add the corresponding reverse reaction"""
         reactions = []
 
-        for reaction in self._list:
+        for reaction in self.reactions:
 
             # Don't modify irreversible forward reactions
             if not reaction.is_reversible():
@@ -178,10 +188,11 @@ class ReactionSet:
             reactions.append(swapped_reaction)
 
         # Reset the reactions with the fully populated list
-        self._list = reactions
+        self.reactions = reactions
         return None
 
     def __init__(self, *args):
         """Set of reactions"""
-        self._list = args
+
+        self.reactions = args
         self.add_reverse_reactions()

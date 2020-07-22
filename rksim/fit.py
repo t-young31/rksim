@@ -16,8 +16,7 @@ def fit(data, system, optimise):
     :param system: (rksim.system.System) equation system that these
                    data will be fit to
     """
-    # Set the stoichiometries matrix
-    system.set_stos()
+    system.set_stoichiometries()
 
     init_concs = [system.network.nodes[i]['c0'] for i in system.network.nodes]
 
