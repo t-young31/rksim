@@ -4,10 +4,9 @@ import rksim.networks as nws
 from rksim.reactions import ReactionSet
 from rksim.plotting import plot
 from rksim.exceptions import CannotSetAttribute
-from rksim.exceptions import CannotGetAttribute
 
 
-class System:
+class System(ReactionSet):
 
     def __str__(self):
         return f'{[species.name for species in self.species()]}'
@@ -48,34 +47,6 @@ class System:
                     mse += diff ** 2
 
         return mse
-
-    def rate_constants(self):
-        """Get a numpy array of rate constants"""
-        return np.array([reaction.k for reaction in self.reactions])
-
-    def rate_constant(self, *args):
-        """Get a rate constant for a reaction.
-
-        system.rate_constant('R', 'P') :-> k_RP if the reaction R -> P is in
-        the system
-
-        :param args: (str) >1 Name of a species in this system
-        """
-        return self.reactions.rate_constant(species_names=args)
-
-    def set_rate_constant(self, *args, k=1.0):
-        """Set a rate constant for a reaction"""
-        return self.reactions.set_rate_constant(species_names=args, k=k)
-
-    def set_rate_constants(self, ks=None, k=None):
-        """Set rate constants
-
-        :param ks: (np.ndarray) shape = (n,) where n is the number of unique
-                   rate constants in the reaction network
-
-        :param k: (float) Rate constant to set all ks as
-        """
-        return self.reactions.set_rate_constants(ks=ks, k=k)
 
     def set_initial_concentration(self, name, c):
         """
@@ -124,6 +95,75 @@ class System:
                                                       concentrations=concs)
         return None
 
+    def set_stoichiometries(self):
+        """Set an array of stoichiometries"""
+        n = len(self.reactions)
+        m = self.network.number_of_nodes()
+
+        # Matrix of stoichiometries (sto). Reactions as rows and unique
+        # species as columns
+        self.stos = np.zeros(shape=(n, m, 2))
+
+        for i, reaction in enumerate(self.reactions):
+            reactant_names = [r.name for r in reaction.reactants()]
+
+            for species_name, j in self.network.node_mapping.items():
+
+                # Final idx is 0 if this species is a Reactant or 1 if Product
+                k = 0 if species_name in reactant_names else 1
+
+                self.stos[i, j, k] = reaction.sto(species_name)
+
+        return None
+
+    def component_derivative(self, i, concentrations):
+        """Calculate the derivative with respect to a component i in the
+        system.
+                                      __
+        dc_i/dt = (   Σ   S_{j,i} k_j  || c_k ^S_{j, k}  -
+                  ( j ∈ P              k
+                                      __
+                     Σ   S_{j,i} k_j  || c_k ^S_{j, k} )
+                    j ∈ R              k               )
+
+        where P is the set of reactions where i is a product and R is the
+        set of reactions where i is a reactant
+        """
+        n = len(concentrations)
+        inflow, outflow = 0.0, 0.0
+
+        for j, reaction in enumerate(self.reactions):
+
+            # If this component is outflowing
+            if self.stos[j, i, 0] != 0:
+                conc = self.stos[j, i, 0]
+
+                for k in range(n):
+
+                    # If the reactant is not present then the stoichometry
+                    # is 0 and conc will be multipled by 1
+                    conc *= concentrations[k] ** self.stos[j, k, 0]
+
+                # Add e.g. k[A][B]^2 to the outflow for this reaction
+                outflow += reaction.k * conc
+
+            # If this component is inflow
+            if self.stos[j, i, 1] != 0:
+
+                # Product concentration is just the stoichiometry e.g. for
+                # i == C in A -> 2C then sto = 2
+                conc = self.stos[j, i, 1]
+
+                # For all the reactants in this reaction multiply by
+                # their concentration raised to the power of their
+                # stoichiometry
+                for k in range(n):
+                    conc *= concentrations[k] ** self.stos[j, k, 0]
+
+                inflow += reaction.k * conc
+
+        return inflow - outflow
+
     def derivative(self, concentrations, time=0.0):
         """
         Calculate the derivative of all the concentrations with respect to time
@@ -135,62 +175,9 @@ class System:
                                dm^-3 shape = (n,) where n is the number of
                                components (species in this system). Must be >0
         """
-        # TODO optimise this function
-        n = len(concentrations)
-        dcdt = np.zeros(n)
-
-        for i in range(n):
-            name = self.network.nodes[i]['name']
-            inflow, outflow = 0.0, 0.0
-
-            for reaction in self.reactions:
-                reactants = list(reaction.reactants())
-
-                # If this component is outflowing
-                if name in [r.name for r in reactants]:
-                    sto = reaction.sto(name)
-                    conc = sto * concentrations[i] ** sto
-
-                    for other in reactants:
-
-                        # Don't re-multiply by this conc
-                        if other.name == name:
-                            continue
-
-                        # e.g. if i == A in A + 2B -> C then here the product
-                        # of concs is multiplied by [B]^2
-                        sto = reaction.sto(other.name)
-                        other_idx = self.network.node_mapping[other.name]
-
-                        conc *= concentrations[other_idx] ** sto
-
-                    # Add e.g. k[A][B]^2 to the outflow for this reaction
-                    outflow += reaction.k * conc
-
-                products = list(reaction.products())
-                # If this component is inflow
-                if name in [p.name for p in products]:
-
-                    sto = reaction.sto(name)
-                    # Product concentration is just the stoichiometry e.g. for
-                    # i == C in A -> 2C then sto = 2
-                    conc = sto
-
-                    # For all the reactants in this reaction multiply by
-                    # their concentration raised to the power of their
-                    # stoichiometry
-                    for other in reactants:
-                        sto = reaction.sto(other.name)
-                        other_idx = self.network.node_mapping[other.name]
-
-                        conc *= concentrations[other_idx] ** sto
-
-                    inflow += reaction.k * conc
-
-            # Set the
-            dcdt[i] = inflow - outflow
-
-        return dcdt
+        n_components = len(concentrations)
+        return np.array([self.component_derivative(i, concentrations)
+                         for i in range(n_components)])
 
     def species(self):
         """Get the next species in this system from the reaction network"""
@@ -210,10 +197,16 @@ class System:
 
     def __init__(self, *args):
         """
-        System of reactions
+        System of reactions. Subclass of ReactionSet with a self.reactions
+        attribute
 
         :param args: (rksim.system.Reaction)
         """
+        super().__init__(*args)
 
+        # Network of unique components in the system
         self.network = nws.Network(*args)
-        self.reactions = ReactionSet(*args)
+
+        # Stoichiometry matrix (np.ndarray)
+        self.stos = None
+        self.set_stoichiometries()

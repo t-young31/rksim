@@ -16,43 +16,30 @@ def fit(data, system, optimise):
     :param system: (rksim.system.System) equation system that these
                    data will be fit to
     """
+    system.set_stoichiometries()
+
     init_concs = [system.network.nodes[i]['c0'] for i in system.network.nodes]
 
     # Array of times along which the ODE will be solved
     times = np.linspace(0.0, data.max_time(), num=10000)
 
     if optimise:
-        optimise_rate_constants(system, times, init_concs)
+        # Minimise the difference between the simulated and observed data wrt.
+        # the rate constants and set the optimised values
+        result = minimize(mse,
+                          x0=system.rate_constants(),
+                          method='BFGS',
+                          args=(system, times, init_concs))
+
+        # Rate constants must all be positive (abs(k)) is minimised in mse()
+        system.set_rate_constants(np.abs(result.x))
+        return None
 
     #                    dy/dt            y0        t    in scipy doc notation
     concs = odeint(system.derivative, init_concs, times)
 
     # Set the time series for all components in the system
     system.set_simulated(concs, times)
-    return None
-
-
-def optimise_rate_constants(system, times, init_concs):
-    """
-    Optimise the rate constants in a system of equations to minimise
-    the mean squared error between the simulated and experimental data
-
-    :param system: (rksim.system.System) equation system that these
-                   data will be fit to
-
-    :param times: (np.ndarray) Times (s) over which to solve the ODEs
-
-    :param init_concs: (np.ndarray) Initial concentrations (mol dm^-3)
-    """
-
-    init_ks = system.rate_constants()
-
-    # Minimise the error and set the optimise rate constants
-    result = minimize(mse, x0=init_ks,
-                      method='BFGS',
-                      args=(system, times, init_concs))
-
-    system.set_rate_constants(np.abs(result.x))
     return None
 
 
