@@ -13,7 +13,7 @@ def plot(generator, name=None, dpi=400):
         # Plot a time series directly
         if hasattr(item, 'times'):
             plt.scatter(item.times, item.concentrations,  label=f'{item.name}',
-                        marker='o', s=3, color=color)
+                        marker='o', s=5, color=color)
             continue
 
         # Must otherwise be a series
@@ -24,7 +24,7 @@ def plot(generator, name=None, dpi=400):
         if item.series is not None:
             plt.scatter(item.series.times, item.series.concentrations,
                         label=f'{item.series.name}',
-                        marker='o', s=3, color=color)
+                        marker='o', s=5, color=color)
 
         if item.simulated_series is not None:
             series = item.simulated_series
@@ -43,6 +43,7 @@ def plot(generator, name=None, dpi=400):
 
 def show_or_plot(name=None, dpi=400):
     """Show the plt if name=None otherwise save it"""
+    plt.tight_layout()
 
     if name is not None:
         plt.savefig(f'{name}.png', dpi=dpi)

@@ -1,15 +1,13 @@
 import numpy as np
 from rksim.data import TimeSeries
 import rksim.networks as nws
+from rksim.fit import fit
 from rksim.reactions import ReactionSet
 from rksim.plotting import plot
 from rksim.exceptions import CannotSetAttribute
 
 
 class System(ReactionSet):
-
-    def __str__(self):
-        return f'{[species.name for species in self.species()]}'
 
     def mse(self, relative=False):
         """
@@ -92,7 +90,8 @@ class System(ReactionSet):
             else:
                 species.simulated_series = TimeSeries(name=species.name,
                                                       times=times,
-                                                      concentrations=concs)
+                                                      concentrations=concs,
+                                                      simulated=True)
         return None
 
     def set_stoichiometries(self):
@@ -187,9 +186,12 @@ class System(ReactionSet):
 
         return None
 
-    def fit(self, data, optimise=True):
+    def fit(self, data, optimise=True, max_time=None):
         """Fit some data to this system. i.e. optimise ks"""
-        return data.fit(self, optimise=optimise)
+        if data is not None:
+            data.assign(self)
+
+        return fit(data, self, optimise, max_time)
 
     def plot(self, name='system', dpi=400):
         """Plot both the simulated and experimental data for this system"""

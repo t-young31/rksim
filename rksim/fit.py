@@ -3,7 +3,7 @@ from scipy.optimize import minimize
 import numpy as np
 
 
-def fit(data, system, optimise):
+def fit(data, system, optimise, max_time=None):
     """
     Fit a system of equations to self.series. If not specified
     (system=None) then all reasonable fits will be attempted. This
@@ -21,7 +21,10 @@ def fit(data, system, optimise):
     init_concs = [system.network.nodes[i]['c0'] for i in system.network.nodes]
 
     # Array of times along which the ODE will be solved
-    times = np.linspace(0.0, data.max_time(), num=10000)
+    if max_time is None and data is not None:
+        max_time = data.max_time()
+
+    times = np.linspace(0.0, max_time, num=10000)
 
     if optimise:
         # Minimise the difference between the simulated and observed data wrt.
