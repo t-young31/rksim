@@ -27,6 +27,10 @@ def prune_species(components):
 
 class Reaction:
 
+    def __str__(self):
+        return (f'Reaction({"+".join(r.name for r in self.reactants())} -> '
+                f'{"+".join(p.name for p in self.products())})')
+
     def _components(self, species_class):
         """Get the components of a particular class"""
 
@@ -82,9 +86,24 @@ class Reaction:
 
         return 0
 
+    def _init_from_string(self, string):
+        """Initialise a reaction from a string e.g. A+B->C"""
+        l_components, r_components = string.split('->')
+        components = [Reactant(name) for name in l_components.split('+')]
+        components += [Product(name) for name in r_components.split('+')]
+
+        self.components = prune_species(components)
+        return None
+
     def __init__(self, *args):
         """Reaction e.g. R -> P"""
-        self.components = prune_species(args)
+        if (len(args) == 1 and not
+            (isinstance(args[0], Reactant) or isinstance(args[0], Product))):
+            self._init_from_string(args[0])
+
+        else:
+            self.components = prune_species(args)
+
         self.k = 1.0                            # Rate constant
 
 
@@ -97,6 +116,10 @@ class Reversible(Reaction):
 
 
 class ReactionSet:
+
+    def __str__(self):
+        rxn_str = "\n\t".join(str(rxn) for rxn in self.reactions)
+        return f'Reactions({rxn_str})'
 
     def __iter__(self):
         return iter(self.reactions)
