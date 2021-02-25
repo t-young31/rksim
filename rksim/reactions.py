@@ -151,19 +151,29 @@ class ReactionSet:
 
         raise ex.CannotGetAttribute('Reaction not found')
 
-    def set_rate_constant(self, *args, k=1.0):
+    def set_rate_constant(self, *args, k):
         """Get a named rate constant
 
-        :param species_names: (list(str))
+        :param args: (str | int) either the name of the reaction or the
+                     index in the system
         :param k: (float) Rate constant
         """
 
-        for reaction in self.reactions:
+        for i, reaction in enumerate(self.reactions):
             if list(args) == reaction.ordered_names():
                 reaction.k = k
                 return
 
-        raise ex.CannotSetAttribute('Reaction not found')
+            try:
+                if int(args[0]) == i:
+                    reaction.k = k
+                    return
+
+            except ValueError:
+                # argument not an integer
+                continue
+
+        raise ex.CannotSetAttribute(f'Reaction not found: {args}')
 
     def set_rate_constants(self, ks=None, k=None):
         """Set the rate constants either with an ordered list of ks, or

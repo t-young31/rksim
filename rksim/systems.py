@@ -9,6 +9,10 @@ from rksim.exceptions import CannotSetAttribute
 
 class System(ReactionSet):
 
+    def rmse(self, relative=False):
+        """Calculate the root mean square error over the tim series"""
+        return np.sqrt(self.mse(relative=relative))
+
     def mse(self, relative=False):
         """
         Calculate the mean squared error between the
@@ -193,9 +197,13 @@ class System(ReactionSet):
 
         return fit(data, self, optimise, max_time)
 
-    def plot(self, name='system', dpi=400):
+    def plot(self, name='system', dpi=400, exc_species=None):
         """Plot both the simulated and experimental data for this system"""
-        return plot(self.species(), name=name, dpi=dpi)
+        species = self.species()
+        if exc_species is not None:
+            species = [s for s in species if s.name not in exc_species]
+
+        return plot(species, name=name, dpi=dpi)
 
     def __init__(self, *args):
         """
