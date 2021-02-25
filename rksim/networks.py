@@ -34,8 +34,8 @@ class Network(nx.DiGraph):
                 # Add the node and step the iterator
                 self.add_node(n,  # index of the node
                               name=species.name,  # name of the node
-                              c0=1E-8,  # initial concentration
-                              species=species)  # rksim.species.Species
+                              c0=1E-10,           # initial concentration
+                              species=species)    # rksim.species.Species
                 n += 1
 
         # Set the mapping between node names and node indexes

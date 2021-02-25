@@ -50,6 +50,10 @@ class System(ReactionSet):
 
         return mse
 
+    def initial_concentrations(self):
+        """Return a list of initial concentrations"""
+        return [self.network.nodes[idx]['c0'] for idx in self.network.nodes]
+
     def set_initial_concentration(self, name, c):
         """
         Set the initial concentration (c0) for a species, given
@@ -81,9 +85,9 @@ class System(ReactionSet):
         """
         for i, species in enumerate(self.species()):
 
-            # Concentrations are a matrix of time points as the rows and
-            # columns as the different species
-            concs = concentrations[:, i]
+            # Concentrations are a matrix of time points as the columns and
+            # rows as the different species
+            concs = concentrations[i]
 
             # If a time series is already set only update the concentrations
             if (species.simulated_series is not None
@@ -122,7 +126,7 @@ class System(ReactionSet):
     def component_derivative(self, i, concentrations):
         """Calculate the derivative with respect to a component i in the
         system.
-                                      __
+                                       __
         dc_i/dt = (   Σ   S_{j,i} k_j  || c_k ^S_{j, k}  -
                   ( j ∈ P              k
                                       __
@@ -167,7 +171,7 @@ class System(ReactionSet):
 
         return inflow - outflow
 
-    def derivative(self, concentrations, time=0.0):
+    def derivative(self, time, concentrations):
         """
         Calculate the derivative of all the concentrations with respect to time
 
@@ -190,6 +194,16 @@ class System(ReactionSet):
 
         return None
 
+    def simulate(self, max_time):
+        """Simulate this system to time = max_time"""
+
+        if all(conc == 1E-10 for conc in self.initial_concentrations()):
+            raise RuntimeError('Cannot simulate a system with all zero '
+                               'concentrations. Set some concentrations with'
+                               ' set_initial_concentration()')
+
+        return self.fit(data=None, optimise=False, max_time=max_time)
+
     def fit(self, data, optimise=True, max_time=None):
         """Fit some data to this system. i.e. optimise ks"""
         if data is not None:
@@ -197,13 +211,14 @@ class System(ReactionSet):
 
         return fit(data, self, optimise, max_time)
 
-    def plot(self, name='system', dpi=400, exc_species=None):
+    def plot(self, name='system', dpi=400, exc_species=None,
+             time_units=None, conc_units=None):
         """Plot both the simulated and experimental data for this system"""
         species = self.species()
         if exc_species is not None:
             species = [s for s in species if s.name not in exc_species]
 
-        return plot(species, name=name, dpi=dpi)
+        return plot(species, name, dpi, time_units, conc_units)
 
     def __init__(self, *args):
         """
