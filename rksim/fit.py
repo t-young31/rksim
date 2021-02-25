@@ -44,7 +44,8 @@ def fit(data, system, optimise: Union[list, bool], max_time=None):
                           x0=init_ks,
                           method='BFGS',
                           args=(system, (0.0, max_time),
-                                init_concs, k_idxs_to_opt))
+                                init_concs, k_idxs_to_opt),
+                          tol=0.01)
 
         # Rate constants must all be positive (abs(k)) is minimised in mse()
         for i, idx in enumerate(k_idxs_to_opt):
@@ -52,7 +53,8 @@ def fit(data, system, optimise: Union[list, bool], max_time=None):
 
     #                    dy/dt               t0, tf           y0
     result = solve_ivp(system.derivative, (0.0, max_time), init_concs,
-                       t_eval=np.linspace(0.0, max_time, 1000))
+                       t_eval=np.linspace(0.0, max_time, 1000),
+                       method='LSODA')
     # evaluate over a reasonably dense grid of times, to generate smooth lines
 
     # Set the time series for all components in the system
@@ -69,7 +71,7 @@ def mse(rate_constants, system, times, init_concs, k_idxs_to_opt):
         system.set_rate_constant(idx, k=rate_constants[i])
 
     # Integrate the time forward and set the time series
-    result = solve_ivp(system.derivative, times, init_concs)
+    result = solve_ivp(system.derivative, times, init_concs, method='LSODA')
     system.set_simulated(concentrations=result.y, times=result.t)
 
     return system.mse(relative=True)
