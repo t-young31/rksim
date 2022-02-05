@@ -39,22 +39,33 @@ def test_time_series():
     assert ts.concentrations.shape == (3,)
 
 
-def test_data():
+def test_data_invalid1():
 
     with pytest.raises(RKSimCritical):
         _ = Data('a_filename_that_doesnt_exist')
 
+
+def test_data_invalid2():
     with pytest.raises(DataMalformatted):
         data_path = os.path.join(here, 'broken_data', 'missing_value.csv')
         _ = Data(data_path)
+
+
+def test_data_invalid3():
 
     with pytest.raises(DataMalformatted):
         data_path = os.path.join(here, 'broken_data', 'no_concs.csv')
         _ = Data(data_path)
 
+
+def test_data_invalid4():
+
     with pytest.raises(DataMalformatted):
         data_path = os.path.join(here, 'broken_data', 'no_data.csv')
         _ = Data(data_path)
+
+
+def test_data_valid():
 
     # Should admit malformatted row - just skipped over
     data_path = os.path.join(here, 'broken_data', 'text_value.csv')

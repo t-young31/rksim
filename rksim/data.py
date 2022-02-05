@@ -1,6 +1,7 @@
 import os
 import numpy as np
 import rksim.exceptions as ex
+from typing import List
 from rksim.fit import fit
 from rksim.plotting import plot
 
@@ -144,13 +145,13 @@ class Data:
                 # Only try and extract time series data from filenames
                 continue
 
-            self._list.append(extract_data(filename))
+            self._list += extract_data(filename)
 
         # Systems of equations (rksim.systems.System) fit for these data
         self.fits = None
 
 
-def extract_data(filename, **kwargs):
+def extract_data(filename, **kwargs) -> List[TimeSeries]:
     """
     Extract data from a file. Expecting a format similar to the following .csv
     file:
@@ -195,7 +196,7 @@ def extract_data(filename, **kwargs):
 
     if n_columns == 2:
         name = base_fn if 'name' not in kwargs else kwargs['name']
-        return TimeSeries(name, times, concentrations=array[:, 1])
+        return [TimeSeries(name, times, concentrations=array[:, 1])]
 
     # There are more than 1 concentrations given as a function of time
     series_list = []
@@ -263,6 +264,10 @@ def get_raw_data_from_csv(csv_file):
             continue
 
     if len(array) == 0:
-        raise ex.DataMalformatted
+        raise ex.DataMalformatted('Found no data')
+
+    if not all(len(row) == len(array[0]) for row in array):
+        raise ex.DataMalformatted('Had a jagged array of date with at least '
+                                  'one missing value')
 
     return np.array(array)
