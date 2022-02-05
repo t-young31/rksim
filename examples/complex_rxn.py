@@ -19,5 +19,5 @@ if __name__ == '__main__':
     system.fit(data=None, max_time=30*60*60)  # 30h with no true data
 
     # Save all the time series for further analysis
-    for species in system.species():
+    for species in system.species:
         species.simulated_series.save()

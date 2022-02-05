@@ -62,7 +62,7 @@ def test_reaction_set():
     rxn_set = ReactionSet(Reaction(Reactant('R'), Product('P')))
 
     assert len(rxn_set) == 1
-    assert len(list(rxn_set.species())) == 2
+    assert len(list(rxn_set.species)) == 2
     assert len(list(rxn_set.rate_constants())) == 1.0
     assert all(k == 1.0 for k in rxn_set.rate_constants())
 

@@ -26,7 +26,7 @@ def test_simple_system():
 
     data.assign(system=system)
 
-    for species in system.species():
+    for species in system.species:
         assert species.name in ['R', 'P']
 
         assert species.series is not None
@@ -72,7 +72,7 @@ def test_species():
 
     names = []
 
-    for species in system.species():
+    for species in system.species:
         names.append(species.name)
 
     assert len(names) == 3          # Should only have 3 species

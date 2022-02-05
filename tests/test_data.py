@@ -133,7 +133,7 @@ def test_simple_fit():
     data.assign(system)
 
     # Ensure the initial and final concentrations are as expected
-    for species in system.species():
+    for species in system.species:
         if species.name == 'R':
             assert species.series is not None
             assert 0.999 < species.series.concentrations[0] < 1.001

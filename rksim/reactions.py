@@ -127,6 +127,7 @@ class ReactionSet:
     def __len__(self):
         return len(self.reactions)
 
+    @property
     def species(self):
         """Yield a species in this reaction set. May have repeats"""
 

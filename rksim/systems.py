@@ -22,7 +22,7 @@ class System(ReactionSet):
         """
         mse = 0
 
-        for species in self.species():
+        for species in self.species:
 
             # Only compute the error on species with a time series
             if species.series is None:
@@ -79,7 +79,7 @@ class System(ReactionSet):
 
         :param times: (np.ndarray) Array of times in s. shape = (n,)
         """
-        for i, species in enumerate(self.species()):
+        for i, species in enumerate(self.species):
 
             # Concentrations are a matrix of time points as the rows and
             # columns as the different species
@@ -182,6 +182,7 @@ class System(ReactionSet):
         return np.array([self.component_derivative(i, concentrations)
                          for i in range(n_components)])
 
+    @property
     def species(self):
         """Get the next species in this system from the reaction network"""
 
@@ -199,7 +200,8 @@ class System(ReactionSet):
 
     def plot(self, name='system', dpi=400, exc_species=None):
         """Plot both the simulated and experimental data for this system"""
-        species = self.species()
+        species = self.species
+
         if exc_species is not None:
             species = [s for s in species if s.name not in exc_species]
 
