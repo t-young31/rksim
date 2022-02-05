@@ -43,7 +43,8 @@ def fit(data, system, optimise: Union[list, bool], max_time=None):
         result = minimize(mse,
                           x0=init_ks,
                           method='BFGS',
-                          args=(system, times, init_concs, k_idxs_to_opt))
+                          args=(system, times, init_concs, k_idxs_to_opt),
+                          tol=0.01)
 
         # Rate constants must all be positive (abs(k)) is minimised in mse()
         for i, idx in enumerate(k_idxs_to_opt):
