@@ -1,11 +1,15 @@
 import os
 import numpy as np
 import rksim.exceptions as ex
+from typing import List
 from rksim.fit import fit
 from rksim.plotting import plot
 
 
 class TimeSeries:
+
+    def __str__(self):
+        return f'TimeSeries({self.name}, n={len(self.times)})'
 
     def _check(self):
         """Check the time and concentration arrays are the correct format"""
@@ -15,7 +19,10 @@ class TimeSeries:
 
             # Should be able to convert all values in the array to a float
             for value in array:
-                float(value)
+                try:
+                    float(value)
+                except (ValueError, TypeError):
+                    raise AssertionError(f'Could not convert {value} to float')
 
         # Times and concentrations need to be the same length to be plotted
         # against one another
@@ -23,7 +30,19 @@ class TimeSeries:
 
         # Times should be monotonically increasing so the difference in
         # consecutive elements should all be positive
-        assert np.min(np.diff(self.times)) > 0
+        if np.min(np.diff(self.times)) < 0:
+            raise AssertionError('Time was not monotonically increasing for '
+                                 f'{self.name}. Position: '
+                                 f'{np.argmin(np.diff(self.times))}')
+
+    def save(self):
+        """Save a numpy array of the data as a csv file"""
+        name = f'{self.name}_sim' if self.is_simulated else self.name
+        np.savetxt(f'{name}.csv',
+                   np.vstack((self.times, self.concentrations)).T,
+                   header='Time  Concentration',
+                   delimiter=',')
+        return None
 
     def __init__(self, name, times, concentrations, simulated=False):
         """
@@ -50,6 +69,9 @@ class TimeSeries:
 
 
 class Data:
+
+    def __str__(self):
+        return f'Data({",".join(str(item) for item in self)})'
 
     def __add__(self, other):
         """Add another time-series or list of time series onto this dataset"""
@@ -100,14 +122,14 @@ class Data:
 
         return None
 
-    def fit(self, system, optimise=True):
+    def fit(self, system, optimise=True, max_time=None):
         """Fit a system of reactions/equations to these data"""
         self.assign(system)
-        return fit(self, system, optimise)
+        return fit(self, system, optimise, max_time)
 
-    def plot(self, name=None, dpi=400):
+    def plot(self, name=None):
         """Plot the data with matplotlib"""
-        return plot(self._list, name=name, dpi=dpi)
+        return plot(self._list, name=name)
 
     def __init__(self, *args):
         """
@@ -117,22 +139,19 @@ class Data:
         :param args: (str) Name of the files to extract data from
         """
         self._list = []
-        add_data_from_files(self, filenames=args)
+        for filename in args:
+
+            if type(filename) is not str:
+                # Only try and extract time series data from filenames
+                continue
+
+            self._list += extract_data(filename)
 
         # Systems of equations (rksim.systems.System) fit for these data
         self.fits = None
 
 
-def add_data_from_files(data, filenames):
-    """From a list of files extract the data and add it"""
-
-    for filename in filenames:
-        data += extract_data(filename)
-
-    return None
-
-
-def extract_data(filename, **kwargs):
+def extract_data(filename, **kwargs) -> List[TimeSeries]:
     """
     Extract data from a file. Expecting a format similar to the following .csv
     file:
@@ -165,6 +184,8 @@ def extract_data(filename, **kwargs):
     array = get_raw_data_array(filename)
     n_rows, n_columns = array.shape
 
+    base_fn = os.path.basename(filename).split('.')[0]
+
     # Data must have at least 2 columns
     if n_columns < 2:
         raise ex.DataMalformatted('Data must have at least time and one'
@@ -174,8 +195,8 @@ def extract_data(filename, **kwargs):
     times = array[:, 0]
 
     if n_columns == 2:
-        name = filename if 'name' not in kwargs else kwargs['name']
-        return TimeSeries(name, times, concentrations=array[:, 1])
+        name = base_fn if 'name' not in kwargs else kwargs['name']
+        return [TimeSeries(name, times, concentrations=array[:, 1])]
 
     # There are more than 1 concentrations given as a function of time
     series_list = []
@@ -188,9 +209,10 @@ def extract_data(filename, **kwargs):
             name = kwargs['names'][i-1]
 
         else:
-            name = f'{filename}_{i}'
+            name = f'{base_fn}_{i}'
 
-        series = TimeSeries(name, times, concentrations=array[:, i])
+        series = TimeSeries(name, times,
+                            concentrations=array[:, i])
         series_list.append(series)
 
     return series_list
@@ -242,6 +264,10 @@ def get_raw_data_from_csv(csv_file):
             continue
 
     if len(array) == 0:
-        raise ex.DataMalformatted
+        raise ex.DataMalformatted('Found no data')
+
+    if not all(len(row) == len(array[0]) for row in array):
+        raise ex.DataMalformatted('Had a jagged array of date with at least '
+                                  'one missing value')
 
     return np.array(array)

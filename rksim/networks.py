@@ -34,8 +34,8 @@ class Network(nx.DiGraph):
                 # Add the node and step the iterator
                 self.add_node(n,  # index of the node
                               name=species.name,  # name of the node
-                              c0=1E-8,  # initial concentration
-                              species=species)  # rksim.species.Species
+                              c0=1E-15,           # initial concentration
+                              species=species)    # rksim.species.Species
                 n += 1
 
         # Set the mapping between node names and node indexes
@@ -50,11 +50,11 @@ class Network(nx.DiGraph):
 
         return None
 
-    def plot(self, name=None, dpi=400):
+    def plot(self, name=None):
         """Plot a reaction network using NetworkX and matplotlib"""
         nx.draw_networkx(self)
 
-        return show_or_plot(name, dpi)
+        return show_or_plot(name)
 
     def __init__(self, *args):
         """Subclass of networkx.Graph. Once initialised then calling

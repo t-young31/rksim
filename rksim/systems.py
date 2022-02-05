@@ -1,6 +1,7 @@
 import numpy as np
 from rksim.data import TimeSeries
 import rksim.networks as nws
+from rksim.fit import fit
 from rksim.reactions import ReactionSet
 from rksim.plotting import plot
 from rksim.exceptions import CannotSetAttribute
@@ -8,8 +9,9 @@ from rksim.exceptions import CannotSetAttribute
 
 class System(ReactionSet):
 
-    def __str__(self):
-        return f'{[species.name for species in self.species()]}'
+    def rmse(self, relative=False):
+        """Calculate the root mean square error over the tim series"""
+        return np.sqrt(self.mse(relative=relative))
 
     def mse(self, relative=False):
         """
@@ -20,7 +22,7 @@ class System(ReactionSet):
         """
         mse = 0
 
-        for species in self.species():
+        for species in self.species:
 
             # Only compute the error on species with a time series
             if species.series is None:
@@ -77,7 +79,7 @@ class System(ReactionSet):
 
         :param times: (np.ndarray) Array of times in s. shape = (n,)
         """
-        for i, species in enumerate(self.species()):
+        for i, species in enumerate(self.species):
 
             # Concentrations are a matrix of time points as the rows and
             # columns as the different species
@@ -92,7 +94,8 @@ class System(ReactionSet):
             else:
                 species.simulated_series = TimeSeries(name=species.name,
                                                       times=times,
-                                                      concentrations=concs)
+                                                      concentrations=concs,
+                                                      simulated=True)
         return None
 
     def set_stoichiometries(self):
@@ -179,6 +182,7 @@ class System(ReactionSet):
         return np.array([self.component_derivative(i, concentrations)
                          for i in range(n_components)])
 
+    @property
     def species(self):
         """Get the next species in this system from the reaction network"""
 
@@ -187,13 +191,31 @@ class System(ReactionSet):
 
         return None
 
-    def fit(self, data, optimise=True):
-        """Fit some data to this system. i.e. optimise ks"""
-        return data.fit(self, optimise=optimise)
+    def simulate(self, max_time):
+        """Simulate this system to time = max_time"""
 
-    def plot(self, name='system', dpi=400):
+        if all(self.network.nodes[i]['c0'] < 1E-8 for i in self.network.nodes):
+            raise RuntimeError('Cannot simulate a system with all zero '
+                               'concentrations. Set some concentrations with'
+                               ' set_initial_concentration()')
+
+        return self.fit(data=None, optimise=False, max_time=max_time)
+
+    def fit(self, data, optimise=True, max_time=None):
+        """Fit some data to this system. i.e. optimise ks"""
+        if data is not None:
+            data.assign(self)
+
+        return fit(data, self, optimise, max_time)
+
+    def plot(self, name='system',exc_species=None):
         """Plot both the simulated and experimental data for this system"""
-        return plot(self.species(), name=name, dpi=dpi)
+        species = self.species
+
+        if exc_species is not None:
+            species = [s for s in species if s.name not in exc_species]
+
+        return plot(species, name=name)
 
     def __init__(self, *args):
         """

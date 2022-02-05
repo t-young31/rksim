@@ -20,8 +20,8 @@ def test_plot_series():
 
     # If a name is specified then it should be saved to the current dir
     plot([series], name='test')
-    assert os.path.exists('test.png')
-    os.remove('test.png')
+    assert os.path.exists('test.pdf')
+    os.remove('test.pdf')
 
     with pytest.raises(PlottingFailed):
         plot([None])

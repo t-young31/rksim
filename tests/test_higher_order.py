@@ -1,4 +1,4 @@
-from rksim.reactions import Irreversible
+from rksim.reactions import IrreversibleReaction
 from rksim.systems import System
 from rksim.species import Reactant, Product
 from rksim.data import Data, extract_data
@@ -10,7 +10,7 @@ here = os.path.abspath(os.path.dirname(__file__))
 
 def test_simple():
     # 2R -> P
-    reaction = Irreversible(Reactant('R'), Reactant('R'), Product('P'))
+    reaction = IrreversibleReaction(Reactant('R'), Reactant('R'), Product('P'))
     system = System(reaction)
 
     r_index = system.network.node_mapping['R']
@@ -33,8 +33,8 @@ def test_simple():
 
 def test_ab_reaction():
 
-    reaction = Irreversible(Reactant('A'), Reactant('B'),
-                            Product('P'))
+    reaction = IrreversibleReaction(Reactant('A'), Reactant('B'),
+                                    Product('P'))
 
     system = System(reaction)
 

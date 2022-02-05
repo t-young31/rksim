@@ -27,6 +27,10 @@ def prune_species(components):
 
 class Reaction:
 
+    def __str__(self):
+        return (f'Reaction({"+".join(r.name for r in self.reactants())} -> '
+                f'{"+".join(p.name for p in self.products())})')
+
     def _components(self, species_class):
         """Get the components of a particular class"""
 
@@ -59,10 +63,10 @@ class Reaction:
     def is_reversible(self):
         """Is this reaction reversible?"""
 
-        if isinstance(self, Reversible):
+        if isinstance(self, ReversibleReaction):
             return True
 
-        if isinstance(self, Irreversible):
+        if isinstance(self, IrreversibleReaction):
             return False
 
     def reactants(self):
@@ -82,21 +86,40 @@ class Reaction:
 
         return 0
 
-    def __init__(self, *args):
+    def _init_from_string(self, string):
+        """Initialise a reaction from a string e.g. A+B->C"""
+        l_components, r_components = string.split('->')
+        components = [Reactant(name) for name in l_components.split('+')]
+        components += [Product(name) for name in r_components.split('+')]
+
+        self.components = prune_species(components)
+        return None
+
+    def __init__(self, *args, k=1.0):
         """Reaction e.g. R -> P"""
-        self.components = prune_species(args)
-        self.k = 1.0                            # Rate constant
+        if (len(args) == 1 and not
+            (isinstance(args[0], Reactant) or isinstance(args[0], Product))):
+            self._init_from_string(args[0])
+
+        else:
+            self.components = prune_species(args)
+
+        self.k = k                            # Rate constant
 
 
-class Irreversible(Reaction):
+class IrreversibleReaction(Reaction):
     """Irreversible reaction"""
 
 
-class Reversible(Reaction):
+class ReversibleReaction(Reaction):
     """Reversible reaction"""
 
 
 class ReactionSet:
+
+    def __str__(self):
+        rxn_str = "\n\t".join(str(rxn) for rxn in self.reactions)
+        return f'Reactions({rxn_str})'
 
     def __iter__(self):
         return iter(self.reactions)
@@ -104,6 +127,7 @@ class ReactionSet:
     def __len__(self):
         return len(self.reactions)
 
+    @property
     def species(self):
         """Yield a species in this reaction set. May have repeats"""
 
@@ -128,19 +152,29 @@ class ReactionSet:
 
         raise ex.CannotGetAttribute('Reaction not found')
 
-    def set_rate_constant(self, *args, k=1.0):
+    def set_rate_constant(self, *args, k):
         """Get a named rate constant
 
-        :param species_names: (list(str))
+        :param args: (str | int) either the name of the reaction or the
+                     index in the system
         :param k: (float) Rate constant
         """
 
-        for reaction in self.reactions:
+        for i, reaction in enumerate(self.reactions):
             if list(args) == reaction.ordered_names():
                 reaction.k = k
                 return
 
-        raise ex.CannotSetAttribute('Reaction not found')
+            try:
+                if int(args[0]) == i:
+                    reaction.k = k
+                    return
+
+            except ValueError:
+                # argument not an integer
+                continue
+
+        raise ex.CannotSetAttribute(f'Reaction not found: {args}')
 
     def set_rate_constants(self, ks=None, k=None):
         """Set the rate constants either with an ordered list of ks, or

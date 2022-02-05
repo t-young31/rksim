@@ -6,5 +6,8 @@ setup(name='rksim',
       packages=['rksim'],
       url='https://github.com/t-young31/rksim',
       license='MIT',
-      author='Tom Young',
-      author_email='tom.young@chem.ox.ac.uk')
+      install_requires=['numpy',
+                        'networkx',
+                        'scipy',
+                        'matplotlib'],
+      author='Tom Young')

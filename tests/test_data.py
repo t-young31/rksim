@@ -1,7 +1,7 @@
 from rksim.data import Data, TimeSeries
 from rksim.systems import *
 from rksim.data import extract_data
-from rksim.reactions import Irreversible
+from rksim.reactions import IrreversibleReaction
 from rksim.species import Reactant, Product
 from rksim.systems import System
 from rksim.exceptions import RKSimCritical, DataMalformatted
@@ -39,22 +39,33 @@ def test_time_series():
     assert ts.concentrations.shape == (3,)
 
 
-def test_data():
+def test_data_invalid1():
 
     with pytest.raises(RKSimCritical):
         _ = Data('a_filename_that_doesnt_exist')
 
+
+def test_data_invalid2():
     with pytest.raises(DataMalformatted):
         data_path = os.path.join(here, 'broken_data', 'missing_value.csv')
         _ = Data(data_path)
+
+
+def test_data_invalid3():
 
     with pytest.raises(DataMalformatted):
         data_path = os.path.join(here, 'broken_data', 'no_concs.csv')
         _ = Data(data_path)
 
+
+def test_data_invalid4():
+
     with pytest.raises(DataMalformatted):
         data_path = os.path.join(here, 'broken_data', 'no_data.csv')
         _ = Data(data_path)
+
+
+def test_data_valid():
 
     # Should admit malformatted row - just skipped over
     data_path = os.path.join(here, 'broken_data', 'text_value.csv')
@@ -71,9 +82,9 @@ def test_data():
         assert series is not None
 
     # Test plotting the data
-    data.plot(name='test', dpi=100)
-    assert os.path.exists('test.png')
-    os.remove('test.png')
+    data.plot(name='test')
+    assert os.path.exists('test.pdf')
+    os.remove('test.pdf')
 
     # Test adding two sets of data
     directory = os.path.join(here, 'simple_data')
@@ -117,12 +128,12 @@ def test_simple_fit():
 
     assert 9.9 < data.max_time() < 10.1
 
-    system = System(Irreversible(Reactant(name='R'),
-                                 Product(name='P')))
+    system = System(IrreversibleReaction(Reactant(name='R'),
+                                         Product(name='P')))
     data.assign(system)
 
     # Ensure the initial and final concentrations are as expected
-    for species in system.species():
+    for species in system.species:
         if species.name == 'R':
             assert species.series is not None
             assert 0.999 < species.series.concentrations[0] < 1.001
@@ -144,5 +155,5 @@ def test_simple_fit():
 
     data.fit(system)
     system.plot()
-    assert os.path.exists('system.png')
-    os.remove('system.png')
+    assert os.path.exists('system.pdf')
+    os.remove('system.pdf')

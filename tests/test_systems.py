@@ -1,5 +1,5 @@
 from rksim.systems import System
-from rksim.reactions import Irreversible, Reversible, Reaction
+from rksim.reactions import IrreversibleReaction, ReversibleReaction, Reaction
 from rksim.species import Reactant, Product
 from rksim.exceptions import CannotSetAttribute, CannotGetAttribute
 from rksim.data import Data, extract_data, TimeSeries
@@ -16,8 +16,8 @@ def is_close(a, b):
 
 def test_simple_system():
 
-    system = System(Irreversible(Reactant(name='R'),
-                                 Product(name='P')))
+    system = System(IrreversibleReaction(Reactant(name='R'),
+                                         Product(name='P')))
 
     data_path = os.path.join(here, 'simple_data', 'first_order.csv')
 
@@ -26,7 +26,7 @@ def test_simple_system():
 
     data.assign(system=system)
 
-    for species in system.species():
+    for species in system.species:
         assert species.name in ['R', 'P']
 
         assert species.series is not None
@@ -37,7 +37,7 @@ def test_simple_system():
 
 
 def test_mse():
-    system = System(Irreversible(Reactant('R'), Product('P')))
+    system = System(IrreversibleReaction(Reactant('R'), Product('P')))
 
     # System not assigned to any data shouldn't have any mean squared error
     assert system.mse() == 0
@@ -65,14 +65,14 @@ def test_species():
     A system can be initialised from reactions with the same species
     but they should not be present more than once in system.species()
     """
-    reaction1 = Irreversible(Reactant(name='R'), Product(name='P'))
-    reaction2 = Irreversible(Reactant(name='A'), Product(name='P'))
+    reaction1 = IrreversibleReaction(Reactant(name='R'), Product(name='P'))
+    reaction2 = IrreversibleReaction(Reactant(name='A'), Product(name='P'))
 
     system = System(reaction1, reaction2)
 
     names = []
 
-    for species in system.species():
+    for species in system.species:
         names.append(species.name)
 
     assert len(names) == 3          # Should only have 3 species
@@ -82,8 +82,8 @@ def test_species():
 
 
 def test_setting_k():
-    system = System(Irreversible(Reactant(name='R'),
-                                 Product(name='P')))
+    system = System(IrreversibleReaction(Reactant(name='R'),
+                                         Product(name='P')))
     system.set_rate_constants(k=10.0)
 
     for edge in system.network.edges:
@@ -91,7 +91,7 @@ def test_setting_k():
 
 
 def test_fit():
-    system = System(Irreversible(Reactant('R'), Product('P')))
+    system = System(IrreversibleReaction(Reactant('R'), Product('P')))
     system.set_rate_constants(k=1.2)
 
     data_path = os.path.join(here, 'simple_data', 'first_order.csv')
@@ -111,8 +111,8 @@ def test_fit():
 
 def test_derivative1():
     # R -> P
-    system = System(Irreversible(Reactant(name='R'),
-                                 Product(name='P')))
+    system = System(IrreversibleReaction(Reactant(name='R'),
+                                         Product(name='P')))
     # Set some reasonable rates
     system.set_rate_constants(k=1.0)
 
@@ -131,8 +131,8 @@ def test_derivative1():
 
 def test_derivative2():
     # A + B -> C
-    system = System(Irreversible(Reactant(name='A'), Reactant(name='B'),
-                                 Product(name='C')))
+    system = System(IrreversibleReaction(Reactant(name='A'), Reactant(name='B'),
+                                         Product(name='C')))
     k = 1.0
     system.set_rate_constants(k=k)
 
@@ -152,8 +152,8 @@ def test_derivative2():
 
 def test_derivative3():
     # A -> B + C
-    system = System(Irreversible(Reactant(name='A'),
-                                 Product(name='B'), Product(name='C')))
+    system = System(IrreversibleReaction(Reactant(name='A'),
+                                         Product(name='B'), Product(name='C')))
     k = 1.0
     system.set_rate_constants(k=k)
     c_a, c_b, c_c = [2.0, 1.0, 0.0]
@@ -168,8 +168,8 @@ def test_derivative3():
 def test_derivative4():
     # R  -> P    (reversible)
     #    <-
-    system = System(Reversible(Reactant(name='R'),
-                               Product(name='P')))
+    system = System(ReversibleReaction(Reactant(name='R'),
+                                       Product(name='P')))
 
     kf = kb = 1.0
     system.set_rate_constants(k=kf)
@@ -190,8 +190,8 @@ def test_derivative4():
 def test_derivative5():
     # A + B -> C + D
     #       <-
-    system = System(Reversible(Reactant(name='A'), Reactant(name='B'),
-                               Product(name='C'), Product(name='D')))
+    system = System(ReversibleReaction(Reactant(name='A'), Reactant(name='B'),
+                                       Product(name='C'), Product(name='D')))
     k = 1.0
     system.set_rate_constants(k=k)
     c_a, c_b, c_c, c_d = [2.0, 1.0, 0.2, 0.1]
@@ -210,9 +210,9 @@ def test_derivative6():
     #   C -> D
     #  /
     # B
-    system = System(Irreversible(Reactant('A'), Product('C')),
-                    Irreversible(Reactant('B'), Product('C')),
-                    Irreversible(Reactant('C'), Product('D')))
+    system = System(IrreversibleReaction(Reactant('A'), Product('C')),
+                    IrreversibleReaction(Reactant('B'), Product('C')),
+                    IrreversibleReaction(Reactant('C'), Product('D')))
     k = 1.0
     system.set_rate_constants(k=k)
 
@@ -229,8 +229,8 @@ def test_derivative6():
 
 def test_derivative7():
     # 2A -> B
-    system = System(Irreversible(Reactant('A'), Reactant('A'),
-                                 Product('B')))
+    system = System(IrreversibleReaction(Reactant('A'), Reactant('A'),
+                                         Product('B')))
     k = 1.0
     system.set_rate_constants(k=k)
 
@@ -244,8 +244,8 @@ def test_derivative7():
 
 def test_derivative8():
     # A -> 2B
-    system = System(Irreversible(Reactant('A'),
-                                 Product('B'), Product('B')))
+    system = System(IrreversibleReaction(Reactant('A'),
+                                         Product('B'), Product('B')))
     k = 1.0
     system.set_rate_constants(k=k)
 
@@ -260,8 +260,8 @@ def test_derivative8():
 def test_derivative9():
     # 2A -> B, A -> C
 
-    reaction1 = Irreversible(Reactant('A'), Reactant('A'), Product('B'))
-    reaction2 = Irreversible(Reactant('A'), Product('C'))
+    reaction1 = IrreversibleReaction(Reactant('A'), Reactant('A'), Product('B'))
+    reaction2 = IrreversibleReaction(Reactant('A'), Product('C'))
 
     system = System(reaction1, reaction2)
 
@@ -279,8 +279,8 @@ def test_derivative9():
 def test_derivative10():
     # E + S <--> ES -> E + P
 
-    system = System(Reversible(Reactant('E'), Reactant('S'), Product('ES')),
-                    Irreversible(Reactant('ES'), Product('E'), Product('P')))
+    system = System(ReversibleReaction(Reactant('E'), Reactant('S'), Product('ES')),
+                    IrreversibleReaction(Reactant('ES'), Product('E'), Product('P')))
 
     kf, kb, kr = 1.0, 0.03, 2.0
     system.set_rate_constants([kf, kb, kr])
@@ -305,7 +305,7 @@ def test_derivative10():
 
 def test_set_init_conc():
     # R -> P
-    system = System(Irreversible(Reactant('R'), Product('P')))
+    system = System(IrreversibleReaction(Reactant('R'), Product('P')))
 
     system.set_initial_concentration(name='R', c=2.0)
 
@@ -321,7 +321,7 @@ def test_set_init_conc():
 
 def _test_set_rate_constant():
     # R -> P
-    system = System(Irreversible(Reactant('R'), Product('P')))
+    system = System(IrreversibleReaction(Reactant('R'), Product('P')))
 
     system.set_rate_constant('R', 'P', k=2.0)
 
@@ -335,7 +335,7 @@ def _test_set_rate_constant():
 
 def test_get_rate_constant():
 
-    system = System(Irreversible(Reactant('R'), Product('P')))
+    system = System(IrreversibleReaction(Reactant('R'), Product('P')))
 
     assert system.rate_constant('R', 'P') is not None
 
