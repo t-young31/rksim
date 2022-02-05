@@ -20,8 +20,8 @@ def test_plotting_network():
     system = System(reaction)
 
     system.network.plot(name='test_network')
-    assert os.path.exists('test_network.png')
-    os.remove('test_network.png')
+    assert os.path.exists('test_network.pdf')
+    os.remove('test_network.pdf')
 
 
 def test_reaction_network_addition():

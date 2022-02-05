@@ -127,9 +127,9 @@ class Data:
         self.assign(system)
         return fit(self, system, optimise, max_time)
 
-    def plot(self, name=None, dpi=400):
+    def plot(self, name=None):
         """Plot the data with matplotlib"""
-        return plot(self._list, name=name, dpi=dpi)
+        return plot(self._list, name=name)
 
     def __init__(self, *args):
         """

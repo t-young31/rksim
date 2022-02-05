@@ -82,9 +82,9 @@ def test_data_valid():
         assert series is not None
 
     # Test plotting the data
-    data.plot(name='test', dpi=100)
-    assert os.path.exists('test.png')
-    os.remove('test.png')
+    data.plot(name='test')
+    assert os.path.exists('test.pdf')
+    os.remove('test.pdf')
 
     # Test adding two sets of data
     directory = os.path.join(here, 'simple_data')
@@ -155,5 +155,5 @@ def test_simple_fit():
 
     data.fit(system)
     system.plot()
-    assert os.path.exists('system.png')
-    os.remove('system.png')
+    assert os.path.exists('system.pdf')
+    os.remove('system.pdf')
