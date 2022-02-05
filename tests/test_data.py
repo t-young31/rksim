@@ -1,7 +1,7 @@
 from rksim.data import Data, TimeSeries
 from rksim.systems import *
 from rksim.data import extract_data
-from rksim.reactions import Irreversible
+from rksim.reactions import IrreversibleReaction
 from rksim.species import Reactant, Product
 from rksim.systems import System
 from rksim.exceptions import RKSimCritical, DataMalformatted
@@ -128,8 +128,8 @@ def test_simple_fit():
 
     assert 9.9 < data.max_time() < 10.1
 
-    system = System(Irreversible(Reactant(name='R'),
-                                 Product(name='P')))
+    system = System(IrreversibleReaction(Reactant(name='R'),
+                                         Product(name='P')))
     data.assign(system)
 
     # Ensure the initial and final concentrations are as expected

@@ -3,13 +3,13 @@ from rksim import *
 
 if __name__ == '__main__':
 
-    system = System(Irreversible('a+A->b'),
-                    Irreversible('a+B->d'),
-                    Irreversible('b->C+a'),
-                    Irreversible('d+C->E+a'),
-                    Irreversible('d+A->D+a'),
-                    Irreversible('a+D->c'),
-                    Irreversible('c->F+a'))
+    system = System(Reaction('a+A->b'),
+                    Reaction('a+B->d'),
+                    Reaction('b->C+a'),
+                    Reaction('d+C->E+a'),
+                    Reaction('d+A->D+a'),
+                    Reaction('a+D->c'),
+                    Reaction('c->F+a'))
 
     system.set_initial_concentration('A', 0.05)
     system.set_initial_concentration('B', 0.05)

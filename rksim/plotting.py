@@ -1,10 +1,21 @@
+import matplotlib as mpl
 import matplotlib.pyplot as plt
 from rksim.exceptions import PlottingFailed
-# plt.style.use('paper')
+
+mpl.rcParams['axes.labelsize'] = 15
+mpl.rcParams['lines.linewidth'] = 1.5
+mpl.rcParams['lines.markersize'] = 5
+mpl.rcParams['xtick.labelsize'] = 13
+mpl.rcParams['ytick.labelsize'] = 13
+mpl.rcParams['xtick.direction'] = 'in'
+mpl.rcParams['ytick.direction'] = 'in'
+mpl.rcParams['xtick.top'] = True
+mpl.rcParams['ytick.right'] = True
+mpl.rcParams['axes.linewidth'] = 1.2
 plt.ticklabel_format(style='sci', axis='x', scilimits=(0, 0))
 
 
-def plot(generator, name=None, dpi=400, time_units=None, conc_units=None):
+def plot(generator, name=None, time_units='s', conc_units='mol dm$^{-3}$'):
     """Plot a series of times series with matplotlib"""
     # Plot with consistent colors
     cm = plt.get_cmap('tab10')
@@ -33,7 +44,7 @@ def plot(generator, name=None, dpi=400, time_units=None, conc_units=None):
 
             plt.plot(series.times, series.concentrations,
                      label=f'{series.name} simulated',
-                     lw=1.5, ls='--', color=color)
+                      ls='--', color=color)
 
     # Legend and axis labels
     plt.legend()
@@ -43,15 +54,15 @@ def plot(generator, name=None, dpi=400, time_units=None, conc_units=None):
     time_units = "" if time_units is None else f'/ {time_units}'
     plt.xlabel(f'Time {time_units}')
 
-    return show_or_plot(name, dpi)
+    return show_or_plot(name)
 
 
-def show_or_plot(name=None, dpi=400):
+def show_or_plot(name=None):
     """Show the plt if name=None otherwise save it"""
     plt.tight_layout()
 
     if name is not None:
-        plt.savefig(f'{name}.png', dpi=dpi)
+        plt.savefig(f'{name}.pdf')
 
     else:
         plt.show()

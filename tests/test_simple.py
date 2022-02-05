@@ -1,5 +1,5 @@
 from rksim.species import Reactant, Product
-from rksim.reactions import Reversible, Irreversible
+from rksim.reactions import ReversibleReaction, IrreversibleReaction
 from rksim.data import extract_data
 from rksim.systems import System
 from rksim.data import Data
@@ -12,7 +12,7 @@ here = os.path.abspath(os.path.dirname(__file__))
 def test_simple():
     # R -> P
 
-    system = System(Irreversible(Reactant('R'), Product('P')))
+    system = System(IrreversibleReaction(Reactant('R'), Product('P')))
     system.set_rate_constants(k=1.0)
 
     data_path = os.path.join(here, 'simple_data', 'first_order.csv')
@@ -48,7 +48,7 @@ def test_simple():
 
 def test_simple_reversible():
     # R <-> P
-    system = System(Reversible(Reactant('R'), Product('P')))
+    system = System(ReversibleReaction(Reactant('R'), Product('P')))
     system.set_rate_constants(k=1.0)
 
     data_path = os.path.join(here, 'simple_data', 'first_order_reversible.csv')
@@ -74,8 +74,8 @@ def test_simple_reversible():
 
 def test_simple_alt():
     # B <-- A --> C
-    system = System(Irreversible(Reactant('A'), Product('B')),
-                    Irreversible(Reactant('A'), Product('C')))
+    system = System(IrreversibleReaction(Reactant('A'), Product('B')),
+                    IrreversibleReaction(Reactant('A'), Product('C')))
     system.set_rate_constants(k=1.0)
 
     data_path = os.path.join(here, 'simple_data', 'double_first_order.csv')
@@ -97,8 +97,8 @@ def test_simple_alt():
 def test_simple_consecutive():
     # A -> B -> C
 
-    system = System(Irreversible(Reactant('A'), Product('B')),
-                    Irreversible(Reactant('B'), Product('C')))
+    system = System(IrreversibleReaction(Reactant('A'), Product('B')),
+                    IrreversibleReaction(Reactant('B'), Product('C')))
     system.set_rate_constants(k=1.0)
 
     data_path = os.path.join(here, 'simple_data',

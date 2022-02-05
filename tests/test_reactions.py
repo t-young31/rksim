@@ -1,5 +1,5 @@
 from rksim.reactions import Reaction, ReactionSet
-from rksim.reactions import Irreversible, Reversible
+from rksim.reactions import IrreversibleReaction, ReversibleReaction
 from rksim.species import Reactant, Product, Species
 import rksim.exceptions as ex
 import pytest
@@ -24,10 +24,10 @@ def test_reaction_init():
     # Names of the reaction components sorted by reactants -> products
     assert reaction.ordered_names() == ['R', 'P']
 
-    irrev = Irreversible(r, p)
+    irrev = IrreversibleReaction(r, p)
     assert not irrev.is_reversible()
 
-    rev = Reversible(r, p)
+    rev = ReversibleReaction(r, p)
     assert rev.is_reversible()
 
 
@@ -47,7 +47,7 @@ def test_swapping():
 
 def test_pruning():
 
-    reaction = Irreversible(Reactant('A'), Reactant('A'), Product('P'))
+    reaction = IrreversibleReaction(Reactant('A'), Reactant('A'), Product('P'))
 
     # Should remove the duplicate reactant
     assert len(reaction.components) == 2
@@ -69,7 +69,7 @@ def test_reaction_set():
     # Rate constants are initialised at 1
     assert rxn_set.rate_constant('R', 'P') == 1.0
 
-    rxn_set2 = ReactionSet(Reversible(Reactant('R'), Product('P')))
+    rxn_set2 = ReactionSet(ReversibleReaction(Reactant('R'), Product('P')))
     # Reaction set should add the reverse reaction
     assert len(rxn_set2) == 2
 

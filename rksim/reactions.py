@@ -63,10 +63,10 @@ class Reaction:
     def is_reversible(self):
         """Is this reaction reversible?"""
 
-        if isinstance(self, Reversible):
+        if isinstance(self, ReversibleReaction):
             return True
 
-        if isinstance(self, Irreversible):
+        if isinstance(self, IrreversibleReaction):
             return False
 
     def reactants(self):
@@ -95,7 +95,7 @@ class Reaction:
         self.components = prune_species(components)
         return None
 
-    def __init__(self, *args):
+    def __init__(self, *args, k=1.0):
         """Reaction e.g. R -> P"""
         if (len(args) == 1 and not
             (isinstance(args[0], Reactant) or isinstance(args[0], Product))):
@@ -104,14 +104,14 @@ class Reaction:
         else:
             self.components = prune_species(args)
 
-        self.k = 1.0                            # Rate constant
+        self.k = k                            # Rate constant
 
 
-class Irreversible(Reaction):
+class IrreversibleReaction(Reaction):
     """Irreversible reaction"""
 
 
-class Reversible(Reaction):
+class ReversibleReaction(Reaction):
     """Reversible reaction"""
 
 

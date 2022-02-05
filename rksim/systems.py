@@ -191,6 +191,16 @@ class System(ReactionSet):
 
         return None
 
+    def simulate(self, max_time):
+        """Simulate this system to time = max_time"""
+
+        if all(self.network.nodes[i]['c0'] < 1E-8 for i in self.network.nodes):
+            raise RuntimeError('Cannot simulate a system with all zero '
+                               'concentrations. Set some concentrations with'
+                               ' set_initial_concentration()')
+
+        return self.fit(data=None, optimise=False, max_time=max_time)
+
     def fit(self, data, optimise=True, max_time=None):
         """Fit some data to this system. i.e. optimise ks"""
         if data is not None:
@@ -198,14 +208,14 @@ class System(ReactionSet):
 
         return fit(data, self, optimise, max_time)
 
-    def plot(self, name='system', dpi=400, exc_species=None):
+    def plot(self, name='system',exc_species=None):
         """Plot both the simulated and experimental data for this system"""
         species = self.species
 
         if exc_species is not None:
             species = [s for s in species if s.name not in exc_species]
 
-        return plot(species, name=name, dpi=dpi)
+        return plot(species, name=name)
 
     def __init__(self, *args):
         """
