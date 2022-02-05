@@ -1,6 +1,7 @@
 from rksim import *
 
 data = Data()
+
 # Add data from a csv file containing a time series of [R]
 # where the first column is the time (s) and the second
 # the concentration of R (mol dm^-3) at that time
