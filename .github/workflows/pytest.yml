@@ -30,6 +30,7 @@ jobs:
     - name: Install
       run: |
         conda activate test
+        pip install -r tests/requirements.txt
         pip install .
     - name: Test
       run: |
