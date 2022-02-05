@@ -11,7 +11,7 @@ fitting rate constants to experimental data.
 
 If the requirements (numpy, scipy, networkx) are already satisfied:
 ```
-pip install rksim
+pip install git+https://github.com/t-young31/rksim.git
 ```
 
 ***
